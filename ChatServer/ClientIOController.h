@@ -2,7 +2,7 @@
 #include <WinSock2.h>
 #include <mutex>
 
-#include "ServerDefine.h"
+#include "../Define/PacketDefine.h"
 
 struct threadSafeBuffer
 {

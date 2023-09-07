@@ -1,17 +1,11 @@
-#include <thread>
-#include <mutex>
-#include <string>
-
-#include <winsock2.h>
 #include <ws2tcpip.h>
 #include <mswsock.h>
-#include <stdio.h>
-
-#pragma comment(lib,"ws2_32.lib")
-#pragma comment(lib,"mswsock.lib")  // AcceptEx()
 
 #include "ServerDefine.h"
 #include "ClientIOController.h"
+
+#pragma comment(lib,"ws2_32.lib")
+#pragma comment(lib,"mswsock.lib")  // AcceptEx()
 
 ClientIOController::ClientIOController(const UINT32 index)
 	: _index(index)

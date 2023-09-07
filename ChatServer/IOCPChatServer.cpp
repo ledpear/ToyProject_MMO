@@ -1,16 +1,11 @@
-#include <cstdio>
-#include <cstdlib>
-#include <thread>
 #include <WinSock2.h>
 #include <Windows.h>
-#include <mutex>
-#include <iostream>
-
-#pragma comment(lib,"ws2_32.lib")
 
 #include "ServerDefine.h"
 #include "IOCPChatServer.h"
 #include "ClientIOController.h"
+
+#pragma comment(lib,"ws2_32.lib")
 
 IOCPChatServer::IOCPChatServer()
 {

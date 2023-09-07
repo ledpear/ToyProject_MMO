@@ -4,6 +4,8 @@
 #include <thread>
 #include <mutex>
 
+#include "../Define/PacketDefine.h"
+
 class ClientIOController;
 
 class IOCPChatServer
