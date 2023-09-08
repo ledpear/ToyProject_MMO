@@ -45,7 +45,7 @@ bool IOCPChatServer::bindAndListen(const int bindPort)
 	//소켓 주소 정보
 	SOCKADDR_IN serverAddr;
 	serverAddr.sin_family = AF_INET;
-	serverAddr.sin_port = htons(SERVER_PORT);
+	serverAddr.sin_port = htons(bindPort);
 	serverAddr.sin_addr.S_un.S_addr = htonl(ADDR_ANY);
 
 	if (bind(_serverSock, reinterpret_cast<sockaddr*>(&serverAddr), sizeof(SOCKADDR_IN)) == SOCKET_ERROR)

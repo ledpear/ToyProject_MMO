@@ -2,7 +2,7 @@
 #include <mswsock.h>
 
 #include "ServerDefine.h"
-#include "ClientIOController.h"
+#include "../Define/PacketDefine.h"
 
 #pragma comment(lib,"ws2_32.lib")
 #pragma comment(lib,"mswsock.lib")  // AcceptEx()
@@ -29,13 +29,7 @@ void ClientIOController::initialize(const UINT32 index, HANDLE iocpHandle)
 
 bool ClientIOController::connectIOCP()
 {
-	HANDLE resultHandle = CreateIoCompletionPort(
-		reinterpret_cast<HANDLE>(getSocket()),
-		_IOCPHandle,
-		reinterpret_cast<ULONG_PTR>(this),
-		0
-	);
-
+	HANDLE resultHandle = CreateIoCompletionPort(reinterpret_cast<HANDLE>(getSocket()), _IOCPHandle, reinterpret_cast<ULONG_PTR>(this), 0);
 	if (resultHandle == INVALID_HANDLE_VALUE)
 	{
 		printf_s("[connectIOCP] CreateIoCompletionPort fail : %d\n", getIndex());
@@ -127,7 +121,6 @@ bool ClientIOController::sendMsg(const UINT32 dataSize, const std::string& msgSt
 	CopyMemory(sendOverlappedIOInfo->_wsaBuf.buf, msgStirng.c_str(), dataSize);
 	sendOverlappedIOInfo->_operationType = OperationType::SEND;
 
-	std::lock_guard<std::mutex> lockGuard(_sendBuffer._mutex);
 	DWORD numBytes = 0;
 	const int result = WSASend(_clientSock, &(sendOverlappedIOInfo->_wsaBuf), 1, &numBytes, 0, reinterpret_cast<LPWSAOVERLAPPED>(&sendOverlappedIOInfo), NULL);
 	if ((result == SOCKET_ERROR) && (WSAGetLastError() != ERROR_IO_PENDING))
@@ -147,6 +140,7 @@ bool ClientIOController::sendCompletion(OverlappedIOInfo* sendOverlappedIOInfo)
 	//스마트포인터로 할 수 있으면 하자
 	//sendOverlappedIOInfo가 보낸 객채와 동일한지 확인
 	delete[] sendOverlappedIOInfo->_wsaBuf.buf;
+	delete sendOverlappedIOInfo;
 
 	return true;
 }
@@ -164,4 +158,5 @@ void ClientIOController::close(bool isForce)
 	setsockopt(_clientSock, SOL_SOCKET, SO_LINGER, (char*)&closeLinger, sizeof(closeLinger));
 	closesocket(_clientSock);
 	_clientSock = INVALID_SOCKET;
+	_isConnected = false;
 }
