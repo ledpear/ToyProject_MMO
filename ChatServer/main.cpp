@@ -14,12 +14,15 @@ int main()
 		printf_s("서버초기화에 실패했습니다 프로그램을 종료합니다.\n");
 		return 0;
 	}
+	printf_s("서버초기화 완료.\n");
+
 
 	if (chatServer.bindAndListen(SERVER_PORT) == false)
 	{
 		printf_s("서버초기화에 실패했습니다 프로그램을 종료합니다.\n");
 		return 0;
 	}
+	printf_s("서버 바인드 및 리슨 시작.\n");
 
     chatServer.run(4);
 

@@ -12,21 +12,38 @@ int main()
 		printf_s("클라이언트 초기화에 실패했습니다 프로그램을 종료합니다.\n");
 		return 0;
 	}
+	else
+		printf_s("IOCPClient 초기화 완료.\n");
 
-	bool isConnect = false;
-	bool isCallBack = false;
-	if (chatClient.connect("127.0.0.1", SERVER_PORT, [&isConnect, &isCallBack](bool isResult) { isCallBack = true; isConnect = isResult; }) == false)
+
+	//bool isConnect = false;
+	//bool isCallBack = false;
+	//if (chatClient.connectServer("127.0.0.1", SERVER_PORT, [&isConnect, &isCallBack](bool isResult) { isCallBack = true; isConnect = isResult; }) == false)
+	//{
+	//	printf_s("클라이언트 초기화에 실패했습니다 프로그램을 종료합니다.\n");
+	//	return 0;
+	//}
+	//else
+	//{
+	//	while (isCallBack == false)
+	//	{
+	//		std::this_thread::sleep_for(std::chrono::milliseconds(50));
+	//	}
+
+	//	chatClient.run();
+	//}
+
+	if (chatClient.connectServer("127.0.0.1", SERVER_PORT, [](bool isResult) {}) == false)
 	{
 		printf_s("클라이언트 초기화에 실패했습니다 프로그램을 종료합니다.\n");
 		return 0;
 	}
-
-	while (isCallBack == false)
+	else
 	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(50));
+		printf_s("IOCPClient 서버 연결 완료.\n");
+		chatClient.run();
 	}
-
-	chatClient.run();
+	
 }
 
 // 프로그램 실행: <Ctrl+F5> 또는 [디버그] > [디버깅하지 않고 시작] 메뉴

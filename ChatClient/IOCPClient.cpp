@@ -33,40 +33,57 @@ bool IOCPClient::initialize(const UINT32 maxIOThreadCount)
 	_maxIOThreadCount = maxIOThreadCount;
 
 	//소켓 생성
-	_clientSock = WSASocket(AF_INET, SOCK_STREAM, 0, nullptr, 0, WSA_FLAG_OVERLAPPED);
+	_clientSock = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, nullptr, NULL, WSA_FLAG_OVERLAPPED);
 	if (_clientSock == INVALID_SOCKET)
 		return false;
 
 	return true;
 }
 
-bool IOCPClient::connect(const std::string& ipAddress, const int bindPort, std::function<void(bool)> callback)
+bool IOCPClient::connectServer(const std::string& ipAddress, const int bindPort, std::function<void(bool)> callback)
 {
 	//소켓 주소 정보
 	SOCKADDR_IN serverAddr;
 	serverAddr.sin_family = AF_INET;
 	serverAddr.sin_port = htons(bindPort);
+
+	//IP변환
 	unsigned long inAddr = 0;
-	InetPton(AF_INET, reinterpret_cast<PCWSTR>(ipAddress.c_str()), &inAddr);
-	serverAddr.sin_addr.S_un.S_addr = htonl(inAddr);
+	//InetPton(AF_INET, reinterpret_cast<PCWSTR>(ipAddress.c_str()), &inAddr);
+	InetPton(AF_INET, reinterpret_cast<PCWSTR>("127.0.0.1"), &inAddr);
+	//serverAddr.sin_addr.S_un.S_addr = htonl(inAddr);
+	serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
 	ZeroMemory(&_connectIOInfo, sizeof(OverlappedIOInfo));
 	_connectIOInfo._operationType = OperationType::CONNECT;
 	HANDLE resultHandle = CreateIoCompletionPort(reinterpret_cast<HANDLE>(_clientSock), _iocpHandle, reinterpret_cast<ULONG_PTR>(this), 0);
 
-	GUID guid = WSAID_CONNECTEX;
-	LPFN_CONNECTEX connectExFuntionPointer = nullptr;
-	unsigned long bytes;
-	WSAIoctl(_clientSock, SIO_GET_EXTENSION_FUNCTION_POINTER, &guid, sizeof(guid), &connectExFuntionPointer, sizeof(connectExFuntionPointer), &bytes, nullptr, nullptr);
-
-	int connectExResult = connectExFuntionPointer(_clientSock, reinterpret_cast<sockaddr*>(&serverAddr), sizeof(serverAddr), nullptr, NULL, nullptr, reinterpret_cast<LPOVERLAPPED>(&_connectIOInfo));
-	if (connectExResult == SOCKET_ERROR )
+	int connectResult = 0;
+	if (true)
 	{
-		const int error = WSAGetLastError();
-		if (error != WSA_IO_PENDING)
-		{
-			printf("[sendMsg] ConnectEx 실패 : %d\n", error);
+		connectResult = connect(_clientSock, (sockaddr*)&serverAddr, sizeof(sockaddr));
+		if (connectResult == SOCKET_ERROR) {
+			std::cout << "Error : " << WSAGetLastError() << std::endl;
 			return false;
+		}
+	}
+	else
+	{
+		//비동기 connect
+		GUID guid = WSAID_CONNECTEX;
+		LPFN_CONNECTEX connectExFuntionPointer = nullptr;
+		unsigned long bytes;
+		WSAIoctl(_clientSock, SIO_GET_EXTENSION_FUNCTION_POINTER, &guid, sizeof(guid), &connectExFuntionPointer, sizeof(connectExFuntionPointer), &bytes, nullptr, nullptr);
+
+		connectResult = connectExFuntionPointer(_clientSock, reinterpret_cast<sockaddr*>(&serverAddr), sizeof(serverAddr), nullptr, NULL, nullptr, reinterpret_cast<LPOVERLAPPED>(&_connectIOInfo));
+		if (connectResult == SOCKET_ERROR)
+		{
+			const int error = WSAGetLastError();
+			if (error != WSA_IO_PENDING)
+			{
+				printf("[sendMsg] ConnectEx 실패 : %d\n", error);
+				return false;
+			}
 		}
 	}
 
@@ -83,6 +100,7 @@ void IOCPClient::run()
 		bindRecv();
 		_isWorkThreadRun = true;
 		_runThread = std::thread([this]() { workThreadMain(); });
+		printf_s("IOCPClient 시작.\n");
 	}
 
 	while (true)
@@ -101,7 +119,10 @@ void IOCPClient::run()
 		sendOverlappedIOInfo->_operationType = OperationType::SEND;
 
 		DWORD numBytes = 0;
-		const int result = WSASend(_clientSock, &(sendOverlappedIOInfo->_wsaBuf), 1, &numBytes, 0, reinterpret_cast<LPWSAOVERLAPPED>(&sendOverlappedIOInfo), NULL);
+		DWORD flag = 0;
+		//const int result = WSASend(_clientSock, &(sendOverlappedIOInfo->_wsaBuf), 1, &numBytes, 0, reinterpret_cast<LPWSAOVERLAPPED>(&sendOverlappedIOInfo), NULL);
+		const int result = WSASend(_clientSock, &(sendOverlappedIOInfo->_wsaBuf), 1, &numBytes, flag, NULL, NULL);
+
 		if ((result == SOCKET_ERROR) && (WSAGetLastError() != ERROR_IO_PENDING))
 		{
 			printf("[sendMsg] WSASend()함수 실패 : %d\n", WSAGetLastError());
@@ -115,10 +136,9 @@ void IOCPClient::workThreadMain()
 	DWORD				ioSize = 0;
 	LPOVERLAPPED		lpOverlapped = nullptr;
 	ClientIOController* clientIOController = nullptr;
-
 	while (_isWorkThreadRun)
 	{
-		isSuccess = GetQueuedCompletionStatus(_iocpHandle, &ioSize, reinterpret_cast<PULONG_PTR>(clientIOController), &lpOverlapped, INFINITE);
+		isSuccess = GetQueuedCompletionStatus(_iocpHandle, &ioSize, reinterpret_cast<PULONG_PTR>(&clientIOController), &lpOverlapped, INFINITE);
 
 		if ((isSuccess == true) && (ioSize == 0) && (lpOverlapped == nullptr))
 		{
@@ -153,7 +173,7 @@ void IOCPClient::workThreadMain()
 		break;
 		case OperationType::RECV:
 		{
-			std::string msgString(clientIOController->getSendBuffer()._buffer);
+			std::string msgString(overlappedIOInfo->_wsaBuf.buf);
 			printf("%s\n", msgString.c_str());
 
 			bindRecv();

@@ -7,8 +7,7 @@
 #pragma comment(lib,"ws2_32.lib")
 #pragma comment(lib,"mswsock.lib")  // AcceptEx()
 
-ClientIOController::ClientIOController(const UINT32 index)
-	: _index(index)
+ClientIOController::ClientIOController()
 {
 	ZeroMemory(&_sendBuffer._overlappedIOInfo, sizeof(OverlappedIOInfo));
 	ZeroMemory(&_recvBuffer._overlappedIOInfo, sizeof(OverlappedIOInfo));
@@ -36,7 +35,6 @@ bool ClientIOController::connectIOCP()
 		return false;
 	}
 
-	_isConnected = true;
 	return true;
 }
 
@@ -56,19 +54,34 @@ bool ClientIOController::onAccept(SOCKET listenSock)
 	_acceptIOInfo._wsaBuf.len = 0;
 	_acceptIOInfo._wsaBuf.buf = nullptr;
 	_acceptIOInfo._operationType = OperationType::ACCEPT;
+	_acceptIOInfo._index = _index;
 
-	if (AcceptEx(listenSock, _clientSock, _acceptBuffer, 0, sizeof(SOCKADDR_IN) + 16, sizeof(SOCKADDR_IN) + 16, &bytes, (LPWSAOVERLAPPED) &_acceptIOInfo) == FALSE )
+	if(asycMode)
 	{
-		if (WSAGetLastError() != WSA_IO_PENDING)
+		if (AcceptEx(listenSock, _clientSock, _acceptBuffer, 0, sizeof(SOCKADDR_IN) + 16, sizeof(SOCKADDR_IN) + 16, &bytes, (LPWSAOVERLAPPED)&_acceptIOInfo) == FALSE)
 		{
-			printf_s("[onAccept] AcceptEx Error : %d\n", GetLastError());
-			return false;
+			if (WSAGetLastError() != WSA_IO_PENDING)
+			{
+				printf_s("[onAccept] AcceptEx Error : %d\n", GetLastError());
+				return false;
+			}
+		}
+		else
+		{
+			printf_s("[onAccept] client Index: %d\n", getIndex());
 		}
 	}
 	else
 	{
-		printf_s("[onAccept] client Index: %d\n", getIndex());
-	}
+		SOCKADDR_IN clientAddr;
+		int addrLen = sizeof(SOCKADDR_IN);
+		_clientSock = WSAAccept(listenSock, (struct sockaddr*)&clientAddr, &addrLen, NULL, NULL);
+		if (_clientSock == INVALID_SOCKET)
+		{
+			printf_s("[ERROR] Accept 실패\n");
+			return false;
+		}
+	}	
 
 	return true;
 }
@@ -80,11 +93,14 @@ bool ClientIOController::AcceptCompletion()
 	if (connectIOCP() == false)
 		return false;
 
+	_isConnected = true;
+
 	SOCKADDR_IN	clientAddr;
 	int nAddrLen = sizeof(SOCKADDR_IN);
 	char clientIP[32] = { 0, };
 	inet_ntop(AF_INET, &(clientAddr.sin_addr), clientIP, 32 - 1);
 	printf("Accept Completion Client : IP(%s) SOCKET(%d)\n", clientIP, static_cast<int>(_clientSock));
+	bindRecv();
 
 	return true;
 }
@@ -94,10 +110,15 @@ bool ClientIOController::bindRecv()
 	DWORD flag = 0;
 	DWORD numBytes = 0;
 
+	//recvBuffer 초기화
+	ZeroMemory(&_recvBuffer._overlappedIOInfo, sizeof(OverlappedIOInfo));
+	ZeroMemory(&_recvBuffer._buffer, CHAT_BUF_SIZE);
+
 	//Overlapped I/O을 위해 각 정보를 셋팅해 준다.
 	_recvBuffer._overlappedIOInfo._wsaBuf.len = CHAT_BUF_SIZE;
 	_recvBuffer._overlappedIOInfo._wsaBuf.buf = _recvBuffer._buffer;
 	_recvBuffer._overlappedIOInfo._operationType = OperationType::RECV;
+	_recvBuffer._overlappedIOInfo._index = _index;
 
 	std::lock_guard<std::mutex> lockGuard(_recvBuffer._mutex);
 	const int result = WSARecv(_clientSock, &(_recvBuffer._overlappedIOInfo._wsaBuf), 1, &numBytes, &flag, reinterpret_cast<LPWSAOVERLAPPED>(&(_recvBuffer._overlappedIOInfo)), NULL);
@@ -121,8 +142,9 @@ bool ClientIOController::sendMsg(const UINT32 dataSize, const std::string& msgSt
 	CopyMemory(sendOverlappedIOInfo->_wsaBuf.buf, msgStirng.c_str(), dataSize);
 	sendOverlappedIOInfo->_operationType = OperationType::SEND;
 
+	DWORD flag = 0;
 	DWORD numBytes = 0;
-	const int result = WSASend(_clientSock, &(sendOverlappedIOInfo->_wsaBuf), 1, &numBytes, 0, reinterpret_cast<LPWSAOVERLAPPED>(&sendOverlappedIOInfo), NULL);
+	const int result = WSASend(_clientSock, &(sendOverlappedIOInfo->_wsaBuf), 1, &numBytes, flag, NULL, NULL);
 	if ((result == SOCKET_ERROR) && (WSAGetLastError() != ERROR_IO_PENDING))
 	{
 		printf("[sendMsg] WSASend()함수 실패 : %d\n", WSAGetLastError());

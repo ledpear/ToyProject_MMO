@@ -21,6 +21,7 @@ struct OverlappedIOInfo
 	WSAOVERLAPPED	_overlapped;
 	WSABUF			_wsaBuf;
 	OperationType	_operationType = OperationType::COUNT;
+	UINT32			_index = UINT32_MAX;
 };
 
 struct threadSafeBuffer
@@ -33,14 +34,14 @@ struct threadSafeBuffer
 class ClientIOController
 {
 public:
-	ClientIOController(const UINT32 index);
+	ClientIOController();
 	~ClientIOController();
 
 	inline const bool			isConnected()	const { return _isConnected; }
 	inline const UINT32			getIndex()		const { return _index; }
 	inline SOCKET				getSocket() { return _clientSock; }
-	inline threadSafeBuffer& getRecvBuffer() { return _recvBuffer; }
-	inline threadSafeBuffer& getSendBuffer() { return _sendBuffer; }
+	inline threadSafeBuffer&	getRecvBuffer() { return _recvBuffer; }
+	inline threadSafeBuffer&	getSendBuffer() { return _sendBuffer; }
 
 	void initialize(const UINT32 index, HANDLE iocpHandle);
 	bool connectIOCP();

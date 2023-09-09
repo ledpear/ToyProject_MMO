@@ -14,7 +14,7 @@ public:
 	~IOCPClient();
 
 	bool initialize(const UINT32 maxIOThreadCount);
-	bool connect(const std::string& ipAddress, const int bindPort, std::function<void(bool)> callback);
+	bool connectServer(const std::string& ipAddress, const int bindPort, std::function<void(bool)> callback);
 	void run();
 
 private:
