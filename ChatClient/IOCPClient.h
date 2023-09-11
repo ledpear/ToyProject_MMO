@@ -22,6 +22,8 @@ private:
 	bool bindRecv();
 
 private:
+	ThreadSafeBuffer				_recvBuffer;
+	ThreadSafeBuffer				_sendBuffer;
 	std::vector<std::thread>		_workThread;
 	std::function<void(bool)>		_connectCompleteCallBack;
 	std::mutex						_clientIOLock;
@@ -33,7 +35,6 @@ private:
 	UINT32							_maxIOThreadCount = 0;
 
 	OverlappedIOInfo				_connectIOInfo;
-	threadSafeBuffer				_recvBuffer;
 
 	bool							_wsaStartupResult = false;
 	bool							_isWorkThreadRun = false;

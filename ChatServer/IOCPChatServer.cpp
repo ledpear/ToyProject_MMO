@@ -218,7 +218,6 @@ void IOCPChatServer::workThreadMain()
 			case OperationType::SEND:
 			{
 				//send  완료
-				clientIOController->sendCompletion(overlappedIOInfo);
 			}
 			break;
 			case OperationType::RECV:
@@ -242,7 +241,11 @@ void IOCPChatServer::workThreadMain()
 
 void IOCPChatServer::closeSocket(ClientIOController& clientIOController, bool isForce)
 {
+	if (clientIOController.isConnected() == false)
+		return;
 
+	const UINT32 clientIndex = clientIOController.getIndex();
+	clientIOController.close(isForce);
 }
 
 bool IOCPChatServer::sendMsgAllClients(const UINT32 dataSize, const std::string& msgStirng)

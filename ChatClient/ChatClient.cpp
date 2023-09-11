@@ -9,11 +9,11 @@ int main()
 	IOCPClient chatClient;
 	if( chatClient.initialize(9) == false)
 	{
-		printf_s("클라이언트 초기화에 실패했습니다 프로그램을 종료합니다.\n");
+		printf_s("Client Initialize Fail. Turn off Program.\n");
 		return 0;
 	}
 	else
-		printf_s("IOCPClient 초기화 완료.\n");
+		printf_s("IOCPClient Initialize Complete.\n");
 
 
 	//bool isConnect = false;
@@ -35,12 +35,12 @@ int main()
 
 	if (chatClient.connectServer("127.0.0.1", SERVER_PORT, [](bool isResult) {}) == false)
 	{
-		printf_s("클라이언트 초기화에 실패했습니다 프로그램을 종료합니다.\n");
+		printf_s("Connect Server Fail. Turn off Program.\n");
 		return 0;
 	}
 	else
 	{
-		printf_s("IOCPClient 서버 연결 완료.\n");
+		printf_s("IOCPClient Connect Server Complete.\n");
 		chatClient.run();
 	}
 	

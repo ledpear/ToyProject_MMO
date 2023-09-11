@@ -16,7 +16,7 @@ ClientIOController::ClientIOController()
 
 ClientIOController::~ClientIOController()
 {
-	__noop;
+	close();
 }
 
 void ClientIOController::initialize(const UINT32 index, HANDLE iocpHandle)
@@ -73,9 +73,8 @@ bool ClientIOController::onAccept(SOCKET listenSock)
 	}
 	else
 	{
-		SOCKADDR_IN clientAddr;
 		int addrLen = sizeof(SOCKADDR_IN);
-		_clientSock = WSAAccept(listenSock, (struct sockaddr*)&clientAddr, &addrLen, NULL, NULL);
+		_clientSock = WSAAccept(listenSock, reinterpret_cast<sockaddr*>(&_clientAddr) , &addrLen, NULL, NULL);
 		if (_clientSock == INVALID_SOCKET)
 		{
 			printf_s("[ERROR] Accept 실패\n");
@@ -95,10 +94,9 @@ bool ClientIOController::AcceptCompletion()
 
 	_isConnected = true;
 
-	SOCKADDR_IN	clientAddr;
 	int nAddrLen = sizeof(SOCKADDR_IN);
 	char clientIP[32] = { 0, };
-	inet_ntop(AF_INET, &(clientAddr.sin_addr), clientIP, 32 - 1);
+	inet_ntop(AF_INET, &(_clientAddr.sin_addr), clientIP, 32 - 1);
 	printf("Accept Completion Client : IP(%s) SOCKET(%d)\n", clientIP, static_cast<int>(_clientSock));
 	bindRecv();
 
@@ -109,18 +107,9 @@ bool ClientIOController::bindRecv()
 {
 	DWORD flag = 0;
 	DWORD numBytes = 0;
+	std::lock_guard<std::mutex> guard(_recvBuffer._mutex);
 
-	//recvBuffer 초기화
-	ZeroMemory(&_recvBuffer._overlappedIOInfo, sizeof(OverlappedIOInfo));
-	ZeroMemory(&_recvBuffer._buffer, CHAT_BUF_SIZE);
-
-	//Overlapped I/O을 위해 각 정보를 셋팅해 준다.
-	_recvBuffer._overlappedIOInfo._wsaBuf.len = CHAT_BUF_SIZE;
-	_recvBuffer._overlappedIOInfo._wsaBuf.buf = _recvBuffer._buffer;
-	_recvBuffer._overlappedIOInfo._operationType = OperationType::RECV;
-	_recvBuffer._overlappedIOInfo._index = _index;
-
-	std::lock_guard<std::mutex> lockGuard(_recvBuffer._mutex);
+	resetBufferAndSetOverlappedIOInfo(_recvBuffer, OperationType::RECV);
 	const int result = WSARecv(_clientSock, &(_recvBuffer._overlappedIOInfo._wsaBuf), 1, &numBytes, &flag, reinterpret_cast<LPWSAOVERLAPPED>(&(_recvBuffer._overlappedIOInfo)), NULL);
 	if ((result == SOCKET_ERROR) && (WSAGetLastError() != ERROR_IO_PENDING))
 	{
@@ -136,33 +125,17 @@ bool ClientIOController::sendMsg(const UINT32 dataSize, const std::string& msgSt
 	OverlappedIOInfo* sendOverlappedIOInfo = new OverlappedIOInfo();
 	std::lock_guard<std::mutex> guard(_sendBuffer._mutex);
 
-	ZeroMemory(sendOverlappedIOInfo, sizeof(OverlappedIOInfo));
-	sendOverlappedIOInfo->_wsaBuf.len = dataSize;
-	sendOverlappedIOInfo->_wsaBuf.buf = new char[dataSize];
-	CopyMemory(sendOverlappedIOInfo->_wsaBuf.buf, msgStirng.c_str(), dataSize);
-	sendOverlappedIOInfo->_operationType = OperationType::SEND;
+	resetBufferAndSetOverlappedIOInfo(_sendBuffer, OperationType::SEND);
+	CopyMemory(_sendBuffer._overlappedIOInfo._wsaBuf.buf, msgStirng.c_str(), dataSize);
 
 	DWORD flag = 0;
 	DWORD numBytes = 0;
-	const int result = WSASend(_clientSock, &(sendOverlappedIOInfo->_wsaBuf), 1, &numBytes, flag, NULL, NULL);
+	const int result = WSASend(_clientSock, &(_sendBuffer._overlappedIOInfo._wsaBuf), 1, &numBytes, flag, reinterpret_cast<LPWSAOVERLAPPED>(&(_sendBuffer._overlappedIOInfo)), NULL);
 	if ((result == SOCKET_ERROR) && (WSAGetLastError() != ERROR_IO_PENDING))
 	{
 		printf("[sendMsg] WSASend()함수 실패 : %d\n", WSAGetLastError());
 		return false;
 	}
-
-	return true;
-}
-
-bool ClientIOController::sendCompletion(OverlappedIOInfo* sendOverlappedIOInfo)
-{
-	printf_s("[SendCompletion] : Index(%d)\n", _index);
-	std::lock_guard<std::mutex> guard(_sendBuffer._mutex);
-
-	//스마트포인터로 할 수 있으면 하자
-	//sendOverlappedIOInfo가 보낸 객채와 동일한지 확인
-	delete[] sendOverlappedIOInfo->_wsaBuf.buf;
-	delete sendOverlappedIOInfo;
 
 	return true;
 }
@@ -181,4 +154,17 @@ void ClientIOController::close(bool isForce)
 	closesocket(_clientSock);
 	_clientSock = INVALID_SOCKET;
 	_isConnected = false;
+}
+
+void ClientIOController::resetBufferAndSetOverlappedIOInfo(ThreadSafeBuffer& threadSafeBuffer, OperationType type)
+{
+	//Buffer 초기화
+	ZeroMemory(&threadSafeBuffer._overlappedIOInfo, sizeof(OverlappedIOInfo));
+	ZeroMemory(&threadSafeBuffer._buffer, CHAT_BUF_SIZE);
+
+	//Overlapped I/O을 위해 각 정보를 셋팅해 준다.
+	threadSafeBuffer._overlappedIOInfo._wsaBuf.len = CHAT_BUF_SIZE;
+	threadSafeBuffer._overlappedIOInfo._wsaBuf.buf = threadSafeBuffer._buffer;
+	threadSafeBuffer._overlappedIOInfo._operationType = type;
+	threadSafeBuffer._overlappedIOInfo._index = _index;
 }

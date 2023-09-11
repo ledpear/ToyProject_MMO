@@ -24,7 +24,7 @@ struct OverlappedIOInfo
 	UINT32			_index = UINT32_MAX;
 };
 
-struct threadSafeBuffer
+struct ThreadSafeBuffer
 {
 	char _buffer[CHAT_BUF_SIZE];
 	std::mutex	_mutex;
@@ -40,8 +40,8 @@ public:
 	inline const bool			isConnected()	const { return _isConnected; }
 	inline const UINT32			getIndex()		const { return _index; }
 	inline SOCKET				getSocket() { return _clientSock; }
-	inline threadSafeBuffer&	getRecvBuffer() { return _recvBuffer; }
-	inline threadSafeBuffer&	getSendBuffer() { return _sendBuffer; }
+	inline ThreadSafeBuffer&	getRecvBuffer() { return _recvBuffer; }
+	inline ThreadSafeBuffer&	getSendBuffer() { return _sendBuffer; }
 
 	void initialize(const UINT32 index, HANDLE iocpHandle);
 	bool connectIOCP();
@@ -51,18 +51,22 @@ public:
 
 	bool bindRecv();
 	bool sendMsg(const UINT32 dataSize, const std::string& msgStirng);
-	bool sendCompletion(OverlappedIOInfo* sendOverlappedIOInfo);
 	void close(bool isForce = false);
 
 private:
-	threadSafeBuffer	_sendBuffer;
-	threadSafeBuffer	_recvBuffer;
+	void resetBufferAndSetOverlappedIOInfo(ThreadSafeBuffer& threadSafeBuffer, OperationType type);
+
+
+private:
+	ThreadSafeBuffer	_sendBuffer;
+	ThreadSafeBuffer	_recvBuffer;
 
 	char				_acceptBuffer[64];
 	OverlappedIOInfo	_acceptIOInfo;
 
 	HANDLE				_IOCPHandle = INVALID_HANDLE_VALUE;
 	SOCKET				_clientSock = INVALID_SOCKET;
+	SOCKADDR_IN			_clientAddr;
 
 	INT32				_index = -1;
 	bool				_isConnected = false;

@@ -47,12 +47,10 @@ bool IOCPClient::connectServer(const std::string& ipAddress, const int bindPort,
 	serverAddr.sin_family = AF_INET;
 	serverAddr.sin_port = htons(bindPort);
 
-	//IP변환
-	unsigned long inAddr = 0;
-	//InetPton(AF_INET, reinterpret_cast<PCWSTR>(ipAddress.c_str()), &inAddr);
-	InetPton(AF_INET, reinterpret_cast<PCWSTR>("127.0.0.1"), &inAddr);
-	//serverAddr.sin_addr.S_un.S_addr = htonl(inAddr);
-	serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+	//dns 사용
+	std::string myServer = "tjsrb7575.iptime.org";
+	hostent* host = gethostbyname(myServer.c_str());
+	serverAddr.sin_addr.s_addr = inet_addr(inet_ntoa(*reinterpret_cast<in_addr*>(host->h_addr_list[0])));
 
 	ZeroMemory(&_connectIOInfo, sizeof(OverlappedIOInfo));
 	_connectIOInfo._operationType = OperationType::CONNECT;
@@ -81,7 +79,7 @@ bool IOCPClient::connectServer(const std::string& ipAddress, const int bindPort,
 			const int error = WSAGetLastError();
 			if (error != WSA_IO_PENDING)
 			{
-				printf("[sendMsg] ConnectEx 실패 : %d\n", error);
+				printf("[sendMsg] ConnectEx Fail : %d\n", error);
 				return false;
 			}
 		}
@@ -100,7 +98,7 @@ void IOCPClient::run()
 		bindRecv();
 		_isWorkThreadRun = true;
 		_runThread = std::thread([this]() { workThreadMain(); });
-		printf_s("IOCPClient 시작.\n");
+		printf_s("IOCPClient Start.\n");
 	}
 
 	while (true)
@@ -125,7 +123,7 @@ void IOCPClient::run()
 
 		if ((result == SOCKET_ERROR) && (WSAGetLastError() != ERROR_IO_PENDING))
 		{
-			printf("[sendMsg] WSASend()함수 실패 : %d\n", WSAGetLastError());
+			printf("[sendMsg] WSASend() Func Fail : %d\n", WSAGetLastError());
 		}
 	}
 }
@@ -205,7 +203,7 @@ bool IOCPClient::bindRecv()
 	const int result = WSARecv(_clientSock, &(_recvBuffer._overlappedIOInfo._wsaBuf), 1, &numBytes, &flag, reinterpret_cast<LPWSAOVERLAPPED>(&(_recvBuffer._overlappedIOInfo)), NULL);
 	if ((result == SOCKET_ERROR) && (WSAGetLastError() != ERROR_IO_PENDING))
 	{
-		printf("[bindRecv] WSARecv()함수 실패 : %d\n", WSAGetLastError());
+		printf("[bindRecv] WSARecv() Func Fail : %d\n", WSAGetLastError());
 		return false;
 	}
 
