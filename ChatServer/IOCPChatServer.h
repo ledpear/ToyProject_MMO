@@ -29,7 +29,7 @@ private:
 	void workThreadMain();
 
 	void closeSocket(ClientIOController& clientIOController, bool isForce = false);
-	bool sendMsgAllClients(const UINT32 dataSize, const std::string& msgStirng);
+	void sendMsgAllClients(const std::string& msgStirng, const UINT32 dataSize);
 
 private:
 	std::thread						_acceptThread;

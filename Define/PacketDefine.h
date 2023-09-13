@@ -61,7 +61,7 @@ private:
 	ThreadSafeBuffer	_sendBuffer;
 	ThreadSafeBuffer	_recvBuffer;
 
-	char				_acceptBuffer[64];
+	char				_acceptBuffer[CHAT_BUF_SIZE];
 	OverlappedIOInfo	_acceptIOInfo;
 
 	HANDLE				_IOCPHandle = INVALID_HANDLE_VALUE;

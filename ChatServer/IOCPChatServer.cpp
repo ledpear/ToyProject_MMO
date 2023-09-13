@@ -1,5 +1,6 @@
 #include <WinSock2.h>
 #include <Windows.h>
+#include <string>
 
 #include "ServerDefine.h"
 #include "IOCPChatServer.h"
@@ -129,42 +130,15 @@ void IOCPChatServer::createWorkThread(const UINT32 maxIOThreadCount)
 
 void IOCPChatServer::acceptThreadMain()
 {
-	if (asycMode)
-	{
-		while (_isAcceptThreadRun)
-		{
-			ClientIOController* clientIOController = getAvailableClientIOController();
-			if (clientIOController == nullptr)
-			{
-				printf_s("클라이언트가 더 이상 접속할 수 없습니다.\n");
-				continue;
-			}
-			else
-				clientIOController->onAccept(_serverSock);
-
-			std::this_thread::sleep_for(std::chrono::milliseconds(50));
-		}
-	}
-	else
+	while (_isAcceptThreadRun)
 	{
 		ClientIOController* clientIOController = getAvailableClientIOController();
 		if (clientIOController == nullptr)
-		{
-			printf_s("클라이언트가 더 이상 접속할 수 없습니다.\n");
-		}
+			continue;
 		else
-		{
-			if (clientIOController->onAccept(_serverSock))
-			{
-				if (clientIOController->AcceptCompletion() == false)
-					closeSocket(*clientIOController);
-			}
-		}
+			clientIOController->onAccept(_serverSock);
 
-		while (_isAcceptThreadRun)
-		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(50));
-		}
+		std::this_thread::sleep_for(std::chrono::milliseconds(50));
 	}	
 }
 
@@ -194,7 +168,9 @@ void IOCPChatServer::workThreadMain()
 		if ((isSuccess == false) || ((overlappedIOInfo->_operationType != OperationType::ACCEPT) && (ioSize == 0)))
 		{
 			//클라이언트 연결 해제 요청
-			closeSocket(*clientIOController);
+			if(clientIOController != nullptr)
+				closeSocket(*clientIOController);
+
 			continue;
 		}
 
@@ -211,8 +187,17 @@ void IOCPChatServer::workThreadMain()
 				}
 
 				ClientIOController* accpetClientIOController = _clientIOControllers[clientIndex].get();
-				if (accpetClientIOController->AcceptCompletion() == false)
+				if ( accpetClientIOController->AcceptCompletion())
+				{
+					//접속해 있는 클라이언트에게 접속 알림 보내기
+					const std::string message(std::to_string(clientIndex) + " Index Client Access");
+					sendMsgAllClients(message.c_str(), message.size());
+				}
+				else
+				{
+					printf_s("[Index:%d] AcceptCompletion Fail.\n", clientIndex);
 					closeSocket(*accpetClientIOController);
+				}
 			}
 			break;
 			case OperationType::SEND:
@@ -223,10 +208,19 @@ void IOCPChatServer::workThreadMain()
 			case OperationType::RECV:
 			{
 				//recv 요청
+				const UINT32 clientIndex = overlappedIOInfo->_index;
 				std::string msgString(clientIOController->getRecvBuffer()._buffer);
-				sendMsgAllClients(ioSize, msgString);
-				printf_s("[index:%d] %s\n", clientIOController->getIndex(), msgString.c_str());
-				clientIOController->bindRecv();
+				msgString = "[index:" + std::to_string(clientIndex) + "] " + msgString;
+
+				printf_s("%s\n", msgString.c_str());
+				sendMsgAllClients(msgString, msgString.size());
+				if (clientIOController->bindRecv() == false)
+				{
+					//클라이언트 연결 해제 요청
+					printf_s("[Index:%d] bindRecv Fail.\n", clientIndex);
+					closeSocket(*clientIOController);
+					continue;
+				}
 			}
 			break;
 			default:
@@ -246,17 +240,22 @@ void IOCPChatServer::closeSocket(ClientIOController& clientIOController, bool is
 
 	const UINT32 clientIndex = clientIOController.getIndex();
 	clientIOController.close(isForce);
+
+	//접속해 있는 클라이언트에게 종료 알림 보내기
+	const std::string message(std::to_string(clientIndex) + " Index Client Exit");
+	printf_s("[Index:%d] Client Exit.\n", clientIndex);
+	sendMsgAllClients(message.c_str(), message.size());
 }
 
-bool IOCPChatServer::sendMsgAllClients(const UINT32 dataSize, const std::string& msgStirng)
+void IOCPChatServer::sendMsgAllClients(const std::string& msgStirng, const UINT32 dataSize)
 {
-	bool isResult = true;
 	const std::lock_guard<std::mutex> lock(_clientIOControllersLock);
 	for (std::unique_ptr<ClientIOController>& clientIOController : _clientIOControllers)
 	{
 		if (clientIOController->isConnected())
-			isResult |= clientIOController->sendMsg(dataSize, msgStirng);
+		{
+			if (clientIOController->sendMsg(dataSize, msgStirng) == false)
+				closeSocket(*clientIOController.get());
+		}
 	}
-
-	return isResult;
 }

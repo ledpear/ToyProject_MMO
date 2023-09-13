@@ -105,7 +105,17 @@ void IOCPClient::run()
 	{
 		std::cin >> sendMsg;
 		if ((_strcmpi(sendMsg.c_str(), "q") == 0) || (_strcmpi(sendMsg.c_str(), "quit") == 0))
+		{
+			//연결 종료
+			linger closeLinger = { 1, 0 };
+			shutdown(_clientSock, SD_BOTH);
+			setsockopt(_clientSock, SOL_SOCKET, SO_LINGER, reinterpret_cast<char*>(&closeLinger), sizeof(closeLinger));
+			closesocket(_clientSock);
+			_clientSock = INVALID_SOCKET;
+			_runThread.join();
+			printf_s("IOCPClient End\n");
 			break;
+		}
 
 		const ULONG msgLength = static_cast<ULONG>(sendMsg.length());
 		OverlappedIOInfo* sendOverlappedIOInfo = new OverlappedIOInfo();
@@ -118,7 +128,6 @@ void IOCPClient::run()
 
 		DWORD numBytes = 0;
 		DWORD flag = 0;
-		//const int result = WSASend(_clientSock, &(sendOverlappedIOInfo->_wsaBuf), 1, &numBytes, 0, reinterpret_cast<LPWSAOVERLAPPED>(&sendOverlappedIOInfo), NULL);
 		const int result = WSASend(_clientSock, &(sendOverlappedIOInfo->_wsaBuf), 1, &numBytes, flag, NULL, NULL);
 
 		if ((result == SOCKET_ERROR) && (WSAGetLastError() != ERROR_IO_PENDING))

@@ -56,31 +56,18 @@ bool ClientIOController::onAccept(SOCKET listenSock)
 	_acceptIOInfo._operationType = OperationType::ACCEPT;
 	_acceptIOInfo._index = _index;
 
-	if(asycMode)
+	if (AcceptEx(listenSock, _clientSock, _acceptBuffer, 0, sizeof(SOCKADDR_IN) + 16, sizeof(SOCKADDR_IN) + 16, &bytes, reinterpret_cast<LPWSAOVERLAPPED>(&_acceptIOInfo)) == FALSE)
 	{
-		if (AcceptEx(listenSock, _clientSock, _acceptBuffer, 0, sizeof(SOCKADDR_IN) + 16, sizeof(SOCKADDR_IN) + 16, &bytes, (LPWSAOVERLAPPED)&_acceptIOInfo) == FALSE)
+		if (WSAGetLastError() != WSA_IO_PENDING)
 		{
-			if (WSAGetLastError() != WSA_IO_PENDING)
-			{
-				printf_s("[onAccept] AcceptEx Error : %d\n", GetLastError());
-				return false;
-			}
-		}
-		else
-		{
-			printf_s("[onAccept] client Index: %d\n", getIndex());
+			printf_s("[onAccept] AcceptEx Error : %d\n", GetLastError());
+			return false;
 		}
 	}
 	else
 	{
-		int addrLen = sizeof(SOCKADDR_IN);
-		_clientSock = WSAAccept(listenSock, reinterpret_cast<sockaddr*>(&_clientAddr) , &addrLen, NULL, NULL);
-		if (_clientSock == INVALID_SOCKET)
-		{
-			printf_s("[ERROR] Accept 실패\n");
-			return false;
-		}
-	}	
+		printf_s("[onAccept] client Index: %d\n", getIndex());
+	}
 
 	return true;
 }
@@ -94,11 +81,16 @@ bool ClientIOController::AcceptCompletion()
 
 	_isConnected = true;
 
-	int nAddrLen = sizeof(SOCKADDR_IN);
+	SOCKADDR* localAddr = nullptr;
+	SOCKADDR* remoteAddr = nullptr;
+	int localSize, remoteSize = 0;
 	char clientIP[32] = { 0, };
-	inet_ntop(AF_INET, &(_clientAddr.sin_addr), clientIP, 32 - 1);
-	printf("Accept Completion Client : IP(%s) SOCKET(%d)\n", clientIP, static_cast<int>(_clientSock));
-	bindRecv();
+	GetAcceptExSockaddrs(_acceptBuffer, 0, sizeof(SOCKADDR_IN) + 16, sizeof(SOCKADDR_IN) + 16, &localAddr, &localSize, &remoteAddr, &remoteSize);
+
+	inet_ntop(AF_INET, &(reinterpret_cast<SOCKADDR_IN*>(remoteAddr)->sin_addr), clientIP, sizeof(clientIP));
+	printf("Accept Completion Client : IP(%s) SOCKET(%d)\n", clientIP, reinterpret_cast<SOCKADDR_IN*>(remoteAddr)->sin_port);
+	if (bindRecv() == false)
+		return false;
 
 	return true;
 }
@@ -113,7 +105,7 @@ bool ClientIOController::bindRecv()
 	const int result = WSARecv(_clientSock, &(_recvBuffer._overlappedIOInfo._wsaBuf), 1, &numBytes, &flag, reinterpret_cast<LPWSAOVERLAPPED>(&(_recvBuffer._overlappedIOInfo)), NULL);
 	if ((result == SOCKET_ERROR) && (WSAGetLastError() != ERROR_IO_PENDING))
 	{
-		printf("[bindRecv] WSARecv()함수 실패 : %d\n", WSAGetLastError());
+		printf("[bindRecv:%d] WSARecv()함수 실패 : %d\n", _index, WSAGetLastError());
 		return false;
 	}
 
@@ -133,7 +125,7 @@ bool ClientIOController::sendMsg(const UINT32 dataSize, const std::string& msgSt
 	const int result = WSASend(_clientSock, &(_sendBuffer._overlappedIOInfo._wsaBuf), 1, &numBytes, flag, reinterpret_cast<LPWSAOVERLAPPED>(&(_sendBuffer._overlappedIOInfo)), NULL);
 	if ((result == SOCKET_ERROR) && (WSAGetLastError() != ERROR_IO_PENDING))
 	{
-		printf("[sendMsg] WSASend()함수 실패 : %d\n", WSAGetLastError());
+		printf("[sendMsg:%d] WSASend()함수 실패 : %d\n", _index, WSAGetLastError());
 		return false;
 	}
 
@@ -143,14 +135,11 @@ bool ClientIOController::sendMsg(const UINT32 dataSize, const std::string& msgSt
 void ClientIOController::close(bool isForce)
 {
 	linger closeLinger = { 0, 0 };	// SO_DONTLINGER로 설정
-
 	if (isForce == false)
-	{
 		closeLinger.l_onoff = 1;
-	}
 
 	shutdown(_clientSock, SD_BOTH);
-	setsockopt(_clientSock, SOL_SOCKET, SO_LINGER, (char*)&closeLinger, sizeof(closeLinger));
+	setsockopt(_clientSock, SOL_SOCKET, SO_LINGER, reinterpret_cast<char*>(&closeLinger) , sizeof(closeLinger));
 	closesocket(_clientSock);
 	_clientSock = INVALID_SOCKET;
 	_isConnected = false;
