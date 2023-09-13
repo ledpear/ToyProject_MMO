@@ -131,12 +131,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="ClientIOController.cpp" />
+    <ClCompile Include="..\Common\SocketIocpController.cpp" />
     <ClCompile Include="IOCPChatServer.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ClientIOController.h" />
+    <ClInclude Include="..\Common\PacketDefine.h" />
+    <ClInclude Include="..\Common\SocketIocpController.h" />
     <ClInclude Include="IOCPChatServer.h" />
     <ClInclude Include="ServerDefine.h" />
   </ItemGroup>

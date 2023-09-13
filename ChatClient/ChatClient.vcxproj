@@ -128,10 +128,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\Common\SocketIocpController.cpp" />
     <ClCompile Include="ChatClient.cpp" />
     <ClCompile Include="IOCPClient.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\Common\PacketDefine.h" />
+    <ClInclude Include="..\Common\SocketIocpController.h" />
     <ClInclude Include="IOCPClient.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -5,7 +5,8 @@
 #include <mutex>
 #include <functional>
 
-#include "../Define/PacketDefine.h"
+#include "../Common/PacketDefine.h"
+#include "../Common/SocketIocpController.h"
 
 class IOCPClient
 {
@@ -19,22 +20,17 @@ public:
 
 private:
 	void workThreadMain();
-	bool bindRecv();
 
 private:
-	ThreadSafeBuffer				_recvBuffer;
-	ThreadSafeBuffer				_sendBuffer;
+	SocketIocpController			_socketIocpController;
 	std::vector<std::thread>		_workThread;
 	std::function<void(bool)>		_connectCompleteCallBack;
-	std::mutex						_clientIOLock;
 	std::thread						_runThread;
 	WSADATA							_wsaData;
 	SOCKET							_serverSock;
 	SOCKET							_clientSock;
 	HANDLE							_iocpHandle = nullptr;
 	UINT32							_maxIOThreadCount = 0;
-
-	OverlappedIOInfo				_connectIOInfo;
 
 	bool							_wsaStartupResult = false;
 	bool							_isWorkThreadRun = false;

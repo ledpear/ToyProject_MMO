@@ -21,9 +21,18 @@
     <ClCompile Include="IOCPClient.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="..\Common\SocketIocpController.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="IOCPClient.h">
+      <Filter>소스 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Common\PacketDefine.h">
+      <Filter>소스 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Common\SocketIocpController.h">
       <Filter>소스 파일</Filter>
     </ClInclude>
   </ItemGroup>

@@ -4,9 +4,9 @@
 #include <thread>
 #include <mutex>
 
-#include "../Define/PacketDefine.h"
+#include "../Common/PacketDefine.h"
 
-class ClientIOController;
+class SocketIocpController;
 
 class IOCPChatServer
 {
@@ -17,26 +17,22 @@ public:
 	//실패 원인 세분화 필요
 	bool initialize(const UINT32 maxIOThreadCount);
 	bool bindAndListen(const int bindPort);
-	void run(const UINT32 maxClientCount);
+	bool run(const UINT32 maxClientCount);
 
 private:
-	ClientIOController* getAvailableClientIOController();
+	SocketIocpController* getAvailableSocketIocpController();
 
-	void createAcceptThread();
 	void createWorkThread(const UINT32 maxIOThreadCount);
-
-	void acceptThreadMain();
 	void workThreadMain();
 
-	void closeSocket(ClientIOController& clientIOController, bool isForce = false);
+	void closeSocketIocpControllerAndStartAccept(SocketIocpController& socketIocpController, bool isForce = false);
 	void sendMsgAllClients(const std::string& msgStirng, const UINT32 dataSize);
 
 private:
-	std::thread						_acceptThread;
 	std::vector<std::thread>		_workThread;
 	//채팅을 보낼 때 반복해서 순회해야하기 때문에 vector로 결정
-	std::vector<std::unique_ptr<ClientIOController>>	_clientIOControllers;
-	std::mutex						_clientIOControllersLock;
+	std::vector<std::unique_ptr<SocketIocpController>>	_socketIocpControllers;
+	std::mutex						_socketIocpControllersLock;
 	WSADATA							_wsaData;
 	SOCKET							_serverSock;
 	HANDLE							_iocpHandle			= nullptr;

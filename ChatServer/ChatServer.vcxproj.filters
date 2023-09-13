@@ -21,7 +21,7 @@
     <ClCompile Include="IOCPChatServer.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="ClientIOController.cpp">
+    <ClCompile Include="..\Common\SocketIocpController.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
   </ItemGroup>
@@ -32,7 +32,10 @@
     <ClInclude Include="ServerDefine.h">
       <Filter>소스 파일</Filter>
     </ClInclude>
-    <ClInclude Include="ClientIOController.h">
+    <ClInclude Include="..\Common\PacketDefine.h">
+      <Filter>소스 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Common\SocketIocpController.h">
       <Filter>소스 파일</Filter>
     </ClInclude>
   </ItemGroup>
