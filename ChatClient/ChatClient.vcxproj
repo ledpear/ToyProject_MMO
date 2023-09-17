@@ -130,12 +130,12 @@
   <ItemGroup>
     <ClCompile Include="..\Common\SocketIocpController.cpp" />
     <ClCompile Include="ChatClient.cpp" />
-    <ClCompile Include="IOCPClient.cpp" />
+    <ClCompile Include="IOCPChatClient.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Common\PacketDefine.h" />
     <ClInclude Include="..\Common\SocketIocpController.h" />
-    <ClInclude Include="IOCPClient.h" />
+    <ClInclude Include="IOCPChatClient.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

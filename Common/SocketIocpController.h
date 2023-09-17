@@ -20,11 +20,8 @@ public:
 	bool acceptAsync(SOCKET listenSock);
 	bool acceptCompletion();
 
-	bool connectAsync(SOCKADDR_IN serverAddr);
-	bool connectCompletion();
-
 	bool bindRecv();
-	bool sendMsg(const UINT32 dataSize, const std::string& msgStirng);
+	bool sendMsg(const std::string& msgStirng);
 	void close(bool isForce = false);
 
 private:
@@ -33,7 +30,7 @@ private:
 private:
 	OverlappedIOBuffer	_overlappedSendBuffer;
 	OverlappedIOBuffer	_overlappedRecvBuffer;
-	OverlappedIOBuffer	_overlappedConnectOrAcceptBuffer;
+	OverlappedIOBuffer	_overlappedAcceptBuffer;
 
 	HANDLE				_IOCPHandle = INVALID_HANDLE_VALUE;
 	SOCKET				_mySock = INVALID_SOCKET;

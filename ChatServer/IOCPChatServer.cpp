@@ -2,7 +2,6 @@
 #include <Windows.h>
 #include <string>
 
-#include "ServerDefine.h"
 #include "IOCPChatServer.h"
 #include "../Common/PacketDefine.h"
 #include "../Common/SocketIocpController.h"
@@ -16,16 +15,7 @@ IOCPChatServer::IOCPChatServer()
 
 IOCPChatServer::~IOCPChatServer()
 {
-	//연결된 소켓 종료
-	for (std::unique_ptr<SocketIocpController>& socketIocpController : _socketIocpControllers)
-	{
-		if (socketIocpController->isConnected() == false)
-			continue;
-
-		closeSocketIocpControllerAndStartAccept(*socketIocpController.get());
-	}
-
-	closesocket(_serverSock);
+	shutdown();
 	if(_wsaStartupResult)
 		WSACleanup();
 }
@@ -113,8 +103,27 @@ bool IOCPChatServer::run(const UINT32 maxClientCount)
 	}
 
 	// work 쓰레드 생성
-	createWorkThread(maxClientCount);	
+	createWorkThread();	
 	return true;
+}
+
+void IOCPChatServer::shutdown()
+{
+	//연결된 소켓 종료
+	for (std::unique_ptr<SocketIocpController>& socketIocpController : _socketIocpControllers)
+	{
+		if (socketIocpController->isConnected() == false)
+			continue;
+
+		closeSocketIocpControllerAndStartAccept(*socketIocpController.get());
+	}
+
+	//스레드 종료
+	_isWorkThreadRun = false;
+	for (std::thread& workThread : _workThreads)
+		workThread.join();
+
+	closesocket(_serverSock);
 }
 
 SocketIocpController* IOCPChatServer::getAvailableSocketIocpController()
@@ -129,25 +138,22 @@ SocketIocpController* IOCPChatServer::getAvailableSocketIocpController()
 	return nullptr;
 }
 
-void IOCPChatServer::createWorkThread(const UINT32 maxIOThreadCount)
+void IOCPChatServer::createWorkThread()
 {
-	const int threadCount = (maxIOThreadCount * 2) + 1;
-
-	_workThread.clear();
-	_workThread.reserve(threadCount);
+	_workThreads.clear();
+	_workThreads.reserve(_maxIOThreadCount);
 
 	_isWorkThreadRun = true;
-	for (int i = 0; i < threadCount; ++i)
-		_workThread.emplace_back([this]() { workThreadMain(); });
+	for (UINT32 i = 0; i < _maxIOThreadCount; ++i)
+		_workThreads.emplace_back([this]() { workThreadMain(); });
 }
 
 void IOCPChatServer::workThreadMain()
 {
-	bool				isSuccess = false;
-	DWORD				ioSize = 0;
-	LPOVERLAPPED		lpOverlapped = nullptr;
+	bool					isSuccess = false;
+	DWORD					ioSize = 0;
+	LPOVERLAPPED			lpOverlapped = nullptr;
 	SocketIocpController*	socketIocpController = nullptr;
-	ULONG_PTR ck = 999;
 
 	while (_isWorkThreadRun)
 	{
@@ -172,7 +178,6 @@ void IOCPChatServer::workThreadMain()
 			continue;
 		}
 
-		//Accept
 		switch (overlappedIOInfo->_operationType)
 		{
 			case OperationType::ACCEPT:
@@ -201,7 +206,7 @@ void IOCPChatServer::workThreadMain()
 
 				//접속해 있는 클라이언트에게 접속 알림 보내기
 				const std::string message(std::to_string(clientIndex) + " Index Client Access");
-				sendMsgAllClients(message.c_str(), static_cast<UINT32>(message.size()));
+				sendMsgAllClients(message.c_str());
 			}
 			break;
 			case OperationType::SEND:
@@ -217,7 +222,7 @@ void IOCPChatServer::workThreadMain()
 				msgString = "[index:" + std::to_string(clientIndex) + "] " + msgString;
 
 				printf_s("%s\n", msgString.c_str());
-				sendMsgAllClients(msgString, static_cast<UINT32>(msgString.size()));
+				sendMsgAllClients(msgString);
 				if (socketIocpController->bindRecv() == false)
 				{
 					//클라이언트 연결 해제 요청
@@ -248,7 +253,7 @@ void IOCPChatServer::closeSocketIocpControllerAndStartAccept(SocketIocpControlle
 	//접속해 있는 클라이언트에게 종료 알림 보내기
 	const std::string message(std::to_string(clientIndex) + " Index Client Exit");
 	printf_s("[Index:%d] Client Exit.\n", clientIndex);
-	sendMsgAllClients(message.c_str(), static_cast<UINT32>(message.size()));
+	sendMsgAllClients(message.c_str());
 
 	//종료한 소켓 다시 비동기 Accept
 	if(socketIocpController.initialize(clientIndex, _iocpHandle) == false)
@@ -264,7 +269,7 @@ void IOCPChatServer::closeSocketIocpControllerAndStartAccept(SocketIocpControlle
 	}
 }
 
-void IOCPChatServer::sendMsgAllClients(const std::string& msgStirng, const UINT32 dataSize)
+void IOCPChatServer::sendMsgAllClients(const std::string& msgStirng)
 {
 	const std::lock_guard<std::mutex> lock(_socketIocpControllersLock);
 	for (std::unique_ptr<SocketIocpController>& socketIocpController : _socketIocpControllers)
@@ -272,7 +277,7 @@ void IOCPChatServer::sendMsgAllClients(const std::string& msgStirng, const UINT3
 		if (socketIocpController->isConnected() == false)
 			continue;
 
-		if (socketIocpController->sendMsg(dataSize, msgStirng) == false)
+		if (socketIocpController->sendMsg(msgStirng) == false)
 		{
 			closeSocketIocpControllerAndStartAccept(*socketIocpController.get());
 			continue;

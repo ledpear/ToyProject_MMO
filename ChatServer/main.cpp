@@ -2,14 +2,16 @@
 //
 #include <string>
 #include <iostream>
-#include "ServerDefine.h"
 #include "IOCPChatServer.h"
+
+constexpr static const UINT8	CLIENT_COUNT = 4;
 
 int main()
 {
     IOCPChatServer chatServer;
-
-	if (chatServer.initialize(9) == false)
+	//cpu수 * (1+ (대기 시간 / 서비스 시간))
+	int threadCount = std::thread::hardware_concurrency();
+	if (chatServer.initialize(threadCount) == false)
 	{
 		printf_s("IOCP Server Initialize Fail. Turn off Program.\n");
 		return 0;
@@ -24,7 +26,7 @@ int main()
 	}
 	printf_s("IOCP Server Bind And Listen Complete.\n");
 
-	if (chatServer.run(4) == false)
+	if (chatServer.run(CLIENT_COUNT) == false)
 	{
 		printf_s("IOCP Server Run Fail. Turn off Program.\n");
 		return 0;
@@ -37,6 +39,9 @@ int main()
 		std::getline(std::cin, inputCmd);
 
 		if (inputCmd == "quit")
+		{
+			chatServer.shutdown();
 			break;
+		}
 	}
 }

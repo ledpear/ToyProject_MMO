@@ -11,7 +11,7 @@ SocketIocpController::SocketIocpController()
 {
 	ZeroMemory(&_overlappedSendBuffer._overlappedIOInfo, sizeof(OverlappedIOInfo));
 	ZeroMemory(&_overlappedRecvBuffer._overlappedIOInfo, sizeof(OverlappedIOInfo));
-	ZeroMemory(&_overlappedConnectOrAcceptBuffer._overlappedIOInfo, sizeof(OverlappedIOInfo));
+	ZeroMemory(&_overlappedAcceptBuffer._overlappedIOInfo, sizeof(OverlappedIOInfo));
 }
 
 SocketIocpController::~SocketIocpController()
@@ -49,7 +49,7 @@ bool SocketIocpController::connectIOCP()
 
 bool SocketIocpController::acceptAsync(SOCKET listenSock)
 {
-	OverlappedIOInfo& acceptIOInfo = _overlappedConnectOrAcceptBuffer._overlappedIOInfo;
+	OverlappedIOInfo& acceptIOInfo = _overlappedAcceptBuffer._overlappedIOInfo;
 	ZeroMemory(&acceptIOInfo, sizeof(OverlappedIOInfo));
 
 	DWORD bytes = 0;
@@ -59,7 +59,7 @@ bool SocketIocpController::acceptAsync(SOCKET listenSock)
 	acceptIOInfo._operationType = OperationType::ACCEPT;
 	acceptIOInfo._index = _index;
 
-	if (AcceptEx(listenSock, _mySock, _overlappedConnectOrAcceptBuffer._buffer, 0, sizeof(SOCKADDR_IN) + 16, sizeof(SOCKADDR_IN) + 16, &bytes, reinterpret_cast<LPWSAOVERLAPPED>(&acceptIOInfo)) == FALSE)
+	if (AcceptEx(listenSock, _mySock, _overlappedAcceptBuffer._buffer, 0, sizeof(SOCKADDR_IN) + 16, sizeof(SOCKADDR_IN) + 16, &bytes, reinterpret_cast<LPWSAOVERLAPPED>(&acceptIOInfo)) == FALSE)
 	{
 		if (WSAGetLastError() != WSA_IO_PENDING)
 		{
@@ -84,45 +84,12 @@ bool SocketIocpController::acceptCompletion()
 	SOCKADDR* remoteAddr = nullptr;
 	int localSize, remoteSize = 0;
 	char clientIP[32] = { 0, };
-	GetAcceptExSockaddrs(_overlappedConnectOrAcceptBuffer._buffer, 0, sizeof(SOCKADDR_IN) + 16, sizeof(SOCKADDR_IN) + 16, &localAddr, &localSize, &remoteAddr, &remoteSize);
+	GetAcceptExSockaddrs(_overlappedAcceptBuffer._buffer, 0, sizeof(SOCKADDR_IN) + 16, sizeof(SOCKADDR_IN) + 16, &localAddr, &localSize, &remoteAddr, &remoteSize);
 
 	inet_ntop(AF_INET, &(reinterpret_cast<SOCKADDR_IN*>(remoteAddr)->sin_addr), clientIP, sizeof(clientIP));
 	printf("Accept Completion Client : IP(%s) SOCKET(%d)\n", clientIP, reinterpret_cast<SOCKADDR_IN*>(remoteAddr)->sin_port);
 
 	return true;
-}
-
-bool SocketIocpController::connectAsync(SOCKADDR_IN serverAddr)
-{
-	//overlapped 초기화 및 셋팅
-	resetBufferAndSetOverlappedIOInfo(_overlappedConnectOrAcceptBuffer, OperationType::CONNECT);
-	OverlappedIOInfo& connectIOInfo = _overlappedConnectOrAcceptBuffer._overlappedIOInfo;
-
-	//함수 포인터
-	GUID guid = WSAID_CONNECTEX;
-	LPFN_CONNECTEX connectExFuntionPointer = nullptr;
-	unsigned long bytes;
-	WSAIoctl(_mySock, SIO_GET_EXTENSION_FUNCTION_POINTER, &guid, sizeof(guid), &connectExFuntionPointer, sizeof(connectExFuntionPointer), &bytes, nullptr, nullptr);
-
-	//비동기 connect
-	int connectResult = 0;
-	connectResult = connectExFuntionPointer(_mySock, reinterpret_cast<sockaddr*>(&serverAddr), sizeof(serverAddr), nullptr, NULL, nullptr, reinterpret_cast<LPOVERLAPPED>(&connectIOInfo));
-	if (connectResult == SOCKET_ERROR)
-	{
-		const int error = WSAGetLastError();
-		if (error != WSA_IO_PENDING)
-		{
-			printf("[connectAsync] ConnectEx Fail : %d\n", error);
-			return false;
-		}
-	}
-
-	return true;
-}
-
-bool SocketIocpController::connectCompletion()
-{
-	return false;
 }
 
 bool SocketIocpController::bindRecv()
@@ -132,7 +99,9 @@ bool SocketIocpController::bindRecv()
 	std::lock_guard<std::mutex> guard(_overlappedRecvBuffer._mutex);
 
 	resetBufferAndSetOverlappedIOInfo(_overlappedRecvBuffer, OperationType::RECV);
-	const int result = WSARecv(_mySock, &(_overlappedRecvBuffer._overlappedIOInfo._wsaBuf), 1, &numBytes, &flag, reinterpret_cast<LPWSAOVERLAPPED>(&(_overlappedRecvBuffer._overlappedIOInfo)), NULL);
+	const int result = WSARecv(_mySock, &(_overlappedRecvBuffer._overlappedIOInfo._wsaBuf),
+		1, &numBytes, &flag, reinterpret_cast<LPWSAOVERLAPPED>(&(_overlappedRecvBuffer._overlappedIOInfo)), NULL);
+
 	if ((result == SOCKET_ERROR) && (WSAGetLastError() != ERROR_IO_PENDING))
 	{
 		printf("[bindRecv:%d] WSARecv()함수 실패 : %d\n", _index, WSAGetLastError());
@@ -142,17 +111,17 @@ bool SocketIocpController::bindRecv()
 	return true;
 }
 
-bool SocketIocpController::sendMsg(const UINT32 dataSize, const std::string& msgStirng)
+bool SocketIocpController::sendMsg(const std::string& msgStirng)
 {
-	OverlappedIOInfo* sendOverlappedIOInfo = new OverlappedIOInfo();
 	std::lock_guard<std::mutex> guard(_overlappedSendBuffer._mutex);
 
 	resetBufferAndSetOverlappedIOInfo(_overlappedSendBuffer, OperationType::SEND);
-	CopyMemory(_overlappedSendBuffer._overlappedIOInfo._wsaBuf.buf, msgStirng.c_str(), dataSize);
+	CopyMemory(_overlappedSendBuffer._overlappedIOInfo._wsaBuf.buf, msgStirng.c_str(), msgStirng.size());
 
 	DWORD flag = 0;
 	DWORD numBytes = 0;
-	const int result = WSASend(_mySock, &(_overlappedSendBuffer._overlappedIOInfo._wsaBuf), 1, &numBytes, flag, reinterpret_cast<LPWSAOVERLAPPED>(&(_overlappedSendBuffer._overlappedIOInfo)), NULL);
+	const int result = WSASend(_mySock, &(_overlappedSendBuffer._overlappedIOInfo._wsaBuf), 1, &numBytes, flag, 
+		reinterpret_cast<LPWSAOVERLAPPED>(&(_overlappedSendBuffer._overlappedIOInfo)), NULL);
 	if ((result == SOCKET_ERROR) && (WSAGetLastError() != ERROR_IO_PENDING))
 	{
 		printf("[sendMsg:%d] WSASend()함수 실패 : %d\n", _index, WSAGetLastError());

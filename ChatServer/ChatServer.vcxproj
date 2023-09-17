@@ -139,7 +139,6 @@
     <ClInclude Include="..\Common\PacketDefine.h" />
     <ClInclude Include="..\Common\SocketIocpController.h" />
     <ClInclude Include="IOCPChatServer.h" />
-    <ClInclude Include="ServerDefine.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -8,11 +8,11 @@
 #include "../Common/PacketDefine.h"
 #include "../Common/SocketIocpController.h"
 
-class IOCPClient
+class IOCPChatClient
 {
 public:	
-	IOCPClient();
-	~IOCPClient();
+	IOCPChatClient();
+	~IOCPChatClient();
 
 	bool initialize(const UINT32 maxIOThreadCount);
 	bool connectServer(const std::string& ipAddress, const int bindPort, std::function<void(bool)> callback);
@@ -23,12 +23,8 @@ private:
 
 private:
 	SocketIocpController			_socketIocpController;
-	std::vector<std::thread>		_workThread;
-	std::function<void(bool)>		_connectCompleteCallBack;
-	std::thread						_runThread;
+	std::thread						_workThread;
 	WSADATA							_wsaData;
-	SOCKET							_serverSock;
-	SOCKET							_clientSock;
 	HANDLE							_iocpHandle = nullptr;
 	UINT32							_maxIOThreadCount = 0;
 

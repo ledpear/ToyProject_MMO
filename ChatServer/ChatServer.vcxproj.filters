@@ -29,9 +29,6 @@
     <ClInclude Include="IOCPChatServer.h">
       <Filter>소스 파일</Filter>
     </ClInclude>
-    <ClInclude Include="ServerDefine.h">
-      <Filter>소스 파일</Filter>
-    </ClInclude>
     <ClInclude Include="..\Common\PacketDefine.h">
       <Filter>소스 파일</Filter>
     </ClInclude>
