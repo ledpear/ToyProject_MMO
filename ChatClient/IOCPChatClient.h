@@ -5,8 +5,8 @@
 #include <mutex>
 #include <functional>
 
-#include "../Common/PacketDefine.h"
-#include "../Common/SocketIocpController.h"
+#include "PacketDefine.h"
+#include "IocpSocketController.h"
 
 class IOCPChatClient
 {
@@ -22,7 +22,7 @@ private:
 	void workThreadMain();
 
 private:
-	SocketIocpController			_socketIocpController;
+	IocpSocketController			_socketIocpController;
 	std::thread						_workThread;
 	WSADATA							_wsaData;
 	HANDLE							_iocpHandle = nullptr;

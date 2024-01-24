@@ -36,7 +36,7 @@ int main()
 	if (isConnectMyServer)
 	{
 		//dns 사용
-		hostent* host = gethostbyname("tjsrb7575.iptime.org");
+		hostent* host = gethostbyname("tjsrb75.synology.me");
 		ipAddress = inet_ntoa(*reinterpret_cast<in_addr*>(host->h_addr_list[0]));
 	}
 	

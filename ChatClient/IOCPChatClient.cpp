@@ -112,7 +112,7 @@ void IOCPChatClient::workThreadMain()
 	bool				isSuccess = false;
 	DWORD				ioSize = 0;
 	LPOVERLAPPED		lpOverlapped = nullptr;
-	SocketIocpController* socketIocpController = nullptr;	
+	IocpSocketController* socketIocpController = nullptr;	
 
 	while (_isWorkThreadRun)
 	{
