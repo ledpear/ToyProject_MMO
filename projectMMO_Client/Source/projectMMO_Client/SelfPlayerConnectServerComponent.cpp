@@ -2,6 +2,7 @@
 
 
 #include "SelfPlayerConnectServerComponent.h"
+#include "IocpSocketController.h"
 
 // Sets default values for this component's properties
 USelfPlayerConnectServerComponent::USelfPlayerConnectServerComponent()
@@ -37,4 +38,5 @@ void USelfPlayerConnectServerComponent::SyncLocation(const float DeltaTime)
 	prevDeltaTime = DeltaTime;
 
 	//위치 Send
+	IocpSocketController iocpSocketController;
 }
