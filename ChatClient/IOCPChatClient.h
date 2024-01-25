@@ -6,7 +6,7 @@
 #include <functional>
 
 #include "PacketDefine.h"
-#include "IocpSocketController.h"
+#include "IocpCommunication.h"
 
 class IOCPChatClient
 {
@@ -22,7 +22,7 @@ private:
 	void workThreadMain();
 
 private:
-	IocpSocketController			_socketIocpController;
+	IocpSocketHandler				_socketIocpController;
 	std::thread						_workThread;
 	WSADATA							_wsaData;
 	HANDLE							_iocpHandle = nullptr;

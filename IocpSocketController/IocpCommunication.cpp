@@ -1,4 +1,4 @@
-﻿// IocpSocketController.cpp : 정적 라이브러리를 위한 함수를 정의합니다.
+﻿// IocpSocketHandler.cpp : 정적 라이브러리를 위한 함수를 정의합니다.
 //
 
 #include "pch.h"
@@ -8,24 +8,24 @@
 #include <mswsock.h>
 
 #include "PacketDefine.h"
-#include "IocpSocketController.h"
+#include "IocpCommunication.h"
 
 #pragma comment(lib,"ws2_32.lib")
 #pragma comment(lib,"mswsock.lib")  // AcceptEx()
 
-IocpSocketController::IocpSocketController()
+IocpSocketHandler::IocpSocketHandler()
 {
 	ZeroMemory(&_overlappedSendBuffer._overlappedIOInfo, sizeof(OverlappedIOInfo));
 	ZeroMemory(&_overlappedRecvBuffer._overlappedIOInfo, sizeof(OverlappedIOInfo));
 	ZeroMemory(&_overlappedAcceptBuffer._overlappedIOInfo, sizeof(OverlappedIOInfo));
 }
 
-IocpSocketController::~IocpSocketController()
+IocpSocketHandler::~IocpSocketHandler()
 {
 	close();
 }
 
-bool IocpSocketController::initialize(const UINT32 index, HANDLE iocpHandle)
+bool IocpSocketHandler::initialize(const UINT32 index, HANDLE iocpHandle)
 {
 	_index = index;
 	_IOCPHandle = iocpHandle;
@@ -41,7 +41,7 @@ bool IocpSocketController::initialize(const UINT32 index, HANDLE iocpHandle)
 	return true;
 }
 
-bool IocpSocketController::connectIOCP()
+bool IocpSocketHandler::connectIOCP()
 {
 	HANDLE resultHandle = CreateIoCompletionPort(reinterpret_cast<HANDLE>(getSocket()), _IOCPHandle, reinterpret_cast<ULONG_PTR>(this), 0);
 	if (resultHandle == INVALID_HANDLE_VALUE)
@@ -53,7 +53,7 @@ bool IocpSocketController::connectIOCP()
 	return true;
 }
 
-bool IocpSocketController::acceptAsync(SOCKET listenSock)
+bool IocpSocketHandler::acceptAsync(SOCKET listenSock)
 {
 	OverlappedIOInfo& acceptIOInfo = _overlappedAcceptBuffer._overlappedIOInfo;
 	ZeroMemory(&acceptIOInfo, sizeof(OverlappedIOInfo));
@@ -77,7 +77,7 @@ bool IocpSocketController::acceptAsync(SOCKET listenSock)
 	return true;
 }
 
-bool IocpSocketController::acceptCompletion()
+bool IocpSocketHandler::acceptCompletion()
 {
 	printf_s("[acceptCompletion] : Index(%d)\n", _index);
 
@@ -98,7 +98,7 @@ bool IocpSocketController::acceptCompletion()
 	return true;
 }
 
-bool IocpSocketController::bindRecv()
+bool IocpSocketHandler::bindRecv()
 {
 	DWORD flag = 0;
 	DWORD numBytes = 0;
@@ -117,7 +117,7 @@ bool IocpSocketController::bindRecv()
 	return true;
 }
 
-bool IocpSocketController::sendMsg(const std::string& msgStirng)
+bool IocpSocketHandler::sendMsg(const std::string& msgStirng)
 {
 	std::lock_guard<std::mutex> guard(_overlappedSendBuffer._mutex);
 
@@ -137,7 +137,7 @@ bool IocpSocketController::sendMsg(const std::string& msgStirng)
 	return true;
 }
 
-void IocpSocketController::close(bool isForce)
+void IocpSocketHandler::close(bool isForce)
 {
 	linger closeLinger = { 0, 0 };	// SO_DONTLINGER로 설정
 	if (isForce == false)
@@ -150,7 +150,7 @@ void IocpSocketController::close(bool isForce)
 	_isConnected = false;
 }
 
-void IocpSocketController::resetBufferAndSetOverlappedIOInfo(OverlappedIOBuffer& overlappedIOBuffer, OperationType type)
+void IocpSocketHandler::resetBufferAndSetOverlappedIOInfo(OverlappedIOBuffer& overlappedIOBuffer, OperationType type)
 {
 	//Buffer 초기화
 	ZeroMemory(&overlappedIOBuffer._overlappedIOInfo, sizeof(OverlappedIOInfo));
@@ -161,4 +161,68 @@ void IocpSocketController::resetBufferAndSetOverlappedIOInfo(OverlappedIOBuffer&
 	overlappedIOBuffer._overlappedIOInfo._wsaBuf.buf = overlappedIOBuffer._buffer;
 	overlappedIOBuffer._overlappedIOInfo._operationType = type;
 	overlappedIOBuffer._overlappedIOInfo._index = _index;
+}
+
+IocpCommunicationManager::IocpCommunicationManager()
+{
+	_wsaStartupResult = (WSAStartup(MAKEWORD(2, 2), &_wsaData) == 0);
+}
+
+IocpCommunicationManager::~IocpCommunicationManager()
+{
+	shutdown();
+	if (_wsaStartupResult)
+		WSACleanup();
+}
+
+bool IocpCommunicationManager::createIOCP(const UINT32 maxIOThreadCount)
+{
+	_iocpHandle = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, maxIOThreadCount);
+	if (_iocpHandle == nullptr)
+		return false;
+
+	_maxIOThreadCount = maxIOThreadCount;
+	_isCreateIOCP = true;
+}
+
+IocpErrorCode IocpCommunicationManager::bindAndListen(const int bindPort)
+{
+	if (_isCreateIOCP == false)
+		return IocpErrorCode::IOCP_ERROR_NOT_CREATE_IOCP;
+
+	//소켓 생성
+	_serverSock = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, nullptr, NULL, WSA_FLAG_OVERLAPPED);
+	if (_serverSock == INVALID_SOCKET)
+		return IocpErrorCode::IOCP_ERROR_FAIL_CREATE_SOCKET;
+
+	//소켓 주소 정보
+	SOCKADDR_IN serverAddr;
+	ZeroMemory(&serverAddr, sizeof(serverAddr));
+	serverAddr.sin_family = AF_INET;
+	serverAddr.sin_port = htons(bindPort);
+	serverAddr.sin_addr.s_addr = htonl(ADDR_ANY);
+
+	//bind
+	if (bind(_serverSock, reinterpret_cast<sockaddr*>(&serverAddr), sizeof(SOCKADDR_IN)) == SOCKET_ERROR)
+	{
+		closesocket(_serverSock);
+		return IocpErrorCode::IOCP_ERROR_FAIL_BIND_SOCKET;
+	}
+
+	//listen
+	if (listen(_serverSock, static_cast<int>(BACKLOG_SIZE)) == SOCKET_ERROR)
+	{
+		closesocket(_serverSock);
+		return IocpErrorCode::IOCP_ERROR_FAIL_LISTEN_SOCKET;
+	}
+
+	//Server Socket IOCP Connect
+	HANDLE resultHandle = CreateIoCompletionPort(reinterpret_cast<HANDLE>(_serverSock), _iocpHandle, (UINT32)0, 0);
+	if (resultHandle == INVALID_HANDLE_VALUE)
+	{
+		closesocket(_serverSock);
+		return IocpErrorCode::IOCP_ERROR_FAIL_CONNECT_SOCKET_TO_IOCP;
+	}
+
+	return IocpErrorCode::NOT_IOCP_ERROR;
 }
