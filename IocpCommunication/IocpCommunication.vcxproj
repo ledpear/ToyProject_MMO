@@ -24,6 +24,7 @@
     <ProjectGuid>{e4f157e4-c9b6-4ef9-a55f-f5596401b3ad}</ProjectGuid>
     <RootNamespace>IocpSocketController</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>IocpCommunication</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -145,13 +146,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="IocpErrorCode.h" />
     <ClInclude Include="framework.h" />
-    <ClInclude Include="IocpSocketController.h" />
+    <ClInclude Include="IocpCommunication.h" />
     <ClInclude Include="PacketDefine.h" />
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="IocpSocketController.cpp" />
+    <ClCompile Include="IocpCommunication.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
