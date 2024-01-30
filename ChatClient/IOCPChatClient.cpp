@@ -15,7 +15,7 @@ IOCPChatClient::IOCPChatClient()
 IOCPChatClient::~IOCPChatClient()
 {
 	_workThread.join();
-	_socketIocpController.close();
+	_iocpSocketHandler.close();
 	if (_wsaStartupResult)
 		WSACleanup();
 }
@@ -27,13 +27,11 @@ bool IOCPChatClient::initialize(const UINT32 maxIOThreadCount)
 		return false;
 
 	// IO Completion Port 생성
-	_iocpHandle = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, maxIOThreadCount);
-	if (_iocpHandle == nullptr)
+	if (_iocpCommunicationManager.createIocp(maxIOThreadCount) != IocpErrorCode::NOT_IOCP_ERROR)
 		return false;
 
 	_maxIOThreadCount = maxIOThreadCount;
-
-	if (_socketIocpController.initialize(0, _iocpHandle) == false)
+	if (_iocpSocketHandler.initialize(0) == false)
 	{
 		printf_s("[initialize] Socket IOCP Controller Initialize Fail\n");
 		return false;
@@ -44,32 +42,9 @@ bool IOCPChatClient::initialize(const UINT32 maxIOThreadCount)
 
 bool IOCPChatClient::connectServer(const std::string& ipAddress, const int bindPort, std::function<void(bool)> callback)
 {
-	//소켓 주소 정보
-	SOCKADDR_IN serverAddr;
-	serverAddr.sin_family = AF_INET;
-	serverAddr.sin_port = htons(bindPort);
-	serverAddr.sin_addr.s_addr = inet_addr(ipAddress.c_str());
-
-	const int connectResult = connect(_socketIocpController.getSocket(), (sockaddr*)&serverAddr, sizeof(sockaddr));
-	if (connectResult == SOCKET_ERROR) 
-	{
-		printf_s("[connectServer] Connect Socket Fail\n");
+	if (_iocpCommunicationManager.connectSocket(_iocpSocketHandler, ipAddress, bindPort) != IocpErrorCode::NOT_IOCP_ERROR)
 		return false;
-	}
 
-	if (_socketIocpController.connectIOCP() == false)
-	{
-		printf_s("[connectServer] Connect IOCP Fail\n");
-		return false;
-	}
-
-	if (_socketIocpController.bindRecv() == false)
-	{
-		printf("[workThreadMain] bindRecv Fail\n");
-		_socketIocpController.close();
-		return false;
-	}
-	;
 	return true;
 }
 
@@ -77,10 +52,10 @@ void IOCPChatClient::run()
 {
 	{
 		//쓰레드 실행
-		if (_socketIocpController.bindRecv() == false)
+		if (_iocpSocketHandler.bindRecv() == false)
 		{
 			printf("[run] bindRecv Fail\n");
-			_socketIocpController.close();
+			_iocpSocketHandler.close();
 			return;
 		}
 		
@@ -96,11 +71,11 @@ void IOCPChatClient::run()
 		if ((_strcmpi(sendMsg.c_str(), "q") == 0) || (_strcmpi(sendMsg.c_str(), "quit") == 0))
 		{
 			//연결 종료
-			_socketIocpController.close();
+			_iocpSocketHandler.close();
 			break;
 		}
 
-		if (_socketIocpController.sendMsg(sendMsg) == false)
+		if (_iocpSocketHandler.sendMsg(sendMsg) == false)
 		{
 			printf("[sendMsg] Socket Iocp Controller sendMsg() Func Fail\n");
 		}
@@ -116,47 +91,49 @@ void IOCPChatClient::workThreadMain()
 
 	while (_isWorkThreadRun)
 	{
-		isSuccess = GetQueuedCompletionStatus(_iocpHandle, &ioSize, reinterpret_cast<PULONG_PTR>(&socketIocpController), &lpOverlapped, INFINITE);
+		_iocpCommunicationManager.workIocpQueue(INFINITE);
 
-		if ((isSuccess == true) && (ioSize == 0) && (lpOverlapped == nullptr))
-		{
-			_isWorkThreadRun = false;
-			continue;
-		}
+		//isSuccess = GetQueuedCompletionStatus(_iocpHandle, &ioSize, reinterpret_cast<PULONG_PTR>(&socketIocpController), &lpOverlapped, INFINITE);
 
-		if ((lpOverlapped == nullptr) || socketIocpController == nullptr)
-			continue;
+		//if ((isSuccess == true) && (ioSize == 0) && (lpOverlapped == nullptr))
+		//{
+		//	_isWorkThreadRun = false;
+		//	continue;
+		//}
 
-		OverlappedIOInfo* overlappedIOInfo = reinterpret_cast<OverlappedIOInfo*>(lpOverlapped);
-		if ((isSuccess == false) || ((overlappedIOInfo->_operationType != OperationType::CONNECT) && (ioSize == 0)))
-		{
-			_socketIocpController.close();
-			break;
-		}
+		//if ((lpOverlapped == nullptr) || socketIocpController == nullptr)
+		//	continue;
 
-		switch (overlappedIOInfo->_operationType)
-		{
-			case OperationType::SEND:
-			break;
-			case OperationType::RECV:
-			{
-				std::string msgString(overlappedIOInfo->_wsaBuf.buf);
-				printf("%s\n", msgString.c_str());
+		//OverlappedIOInfo* overlappedIOInfo = reinterpret_cast<OverlappedIOInfo*>(lpOverlapped);
+		//if ((isSuccess == false) || ((overlappedIOInfo->_operationType != OperationType::CONNECT) && (ioSize == 0)))
+		//{
+		//	_socketIocpController.close();
+		//	break;
+		//}
 
-				if (_socketIocpController.bindRecv() == false)
-				{
-					printf("[run] bindRecv Fail\n");
-					_socketIocpController.close();
-					return;
-				}
-			}
-			break;
-			default:
-			{
-				printf_s("비정상적인 OperationType입니다 [client index : %d]\n", socketIocpController->getIndex());
-			}
-			break;
-		}
+		//switch (overlappedIOInfo->_operationType)
+		//{
+		//	case OperationType::SEND:
+		//	break;
+		//	case OperationType::RECV:
+		//	{
+		//		std::string msgString(overlappedIOInfo->_wsaBuf.buf);
+		//		printf("%s\n", msgString.c_str());
+
+		//		if (_socketIocpController.bindRecv() == false)
+		//		{
+		//			printf("[run] bindRecv Fail\n");
+		//			_socketIocpController.close();
+		//			return;
+		//		}
+		//	}
+		//	break;
+		//	default:
+		//	{
+		//		printf_s("비정상적인 OperationType입니다 [client index : %d]\n", socketIocpController->getIndex());
+		//	}
+		//	break;
+		//}
 
 	}
 }

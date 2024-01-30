@@ -22,10 +22,11 @@ private:
 	void workThreadMain();
 
 private:
-	IocpSocketHandler				_socketIocpController;
+	IocpSocketHandler				_iocpSocketHandler;
+	IocpCommunicationManager		_iocpCommunicationManager;
 	std::thread						_workThread;
 	WSADATA							_wsaData;
-	HANDLE							_iocpHandle = nullptr;
+	//HANDLE							_iocpHandle = nullptr;
 	UINT32							_maxIOThreadCount = 0;
 
 	bool							_wsaStartupResult = false;

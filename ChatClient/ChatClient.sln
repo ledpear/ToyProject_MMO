@@ -5,7 +5,7 @@ VisualStudioVersion = 17.6.33829.357
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ChatClient", "ChatClient.vcxproj", "{A32354D8-5086-4E92-804D-C0DE3DE6EF73}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "IocpSocketController", "..\IocpSocketController\IocpSocketController.vcxproj", "{E4F157E4-C9B6-4EF9-A55F-F5596401B3AD}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "IocpCommunication", "..\IocpCommunication\IocpCommunication.vcxproj", "{E4F157E4-C9B6-4EF9-A55F-F5596401B3AD}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
