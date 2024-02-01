@@ -18,6 +18,11 @@ public:
 	bool connectServer(const std::string& ipAddress, const int bindPort, std::function<void(bool)> callback);
 	void run();
 
+	void closeSocketComplete(IocpSocketHandler& socketIocpController, bool isForce);
+	void acceptComplete(IocpSocketHandler& socketIocpController, bool isForce);
+	void sendComplete(IocpSocketHandler& socketIocpController, bool isForce);
+	void receiveComplete(IocpSocketHandler& socketIocpController, bool isForce);
+
 private:
 	void workThreadMain();
 
@@ -26,7 +31,6 @@ private:
 	IocpCommunicationManager		_iocpCommunicationManager;
 	std::thread						_workThread;
 	WSADATA							_wsaData;
-	//HANDLE							_iocpHandle = nullptr;
 	UINT32							_maxIOThreadCount = 0;
 
 	bool							_wsaStartupResult = false;

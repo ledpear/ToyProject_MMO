@@ -20,18 +20,18 @@ int main()
 	bool isConnectMyServer = false;
 	std::string ipAddress("127.0.0.1");
 	std::string connectMyServer("");
-	while (true)
-	{
-		std::cout << "connect tjsrb7575.iptime.org? (yes/no) (if no, connect localhost)" << std::endl;
-		std::cin >> connectMyServer;
-		if (strcmp("yes", connectMyServer.c_str()) == 0)
-		{
-			isConnectMyServer = true;
-			break;
-		}
-		else if (strcmp("no", connectMyServer.c_str()) == 0)
-			break;
-	}
+	//while (true)
+	//{
+	//	std::cout << "connect tjsrb7575.iptime.org? (yes/no) (if no, connect localhost)" << std::endl;
+	//	std::cin >> connectMyServer;
+	//	if (strcmp("yes", connectMyServer.c_str()) == 0)
+	//	{
+	//		isConnectMyServer = true;
+	//		break;
+	//	}
+	//	else if (strcmp("no", connectMyServer.c_str()) == 0)
+	//		break;
+	//}
 
 	if (isConnectMyServer)
 	{
