@@ -17,4 +17,5 @@ enum class IocpErrorCode
 	IOCP_ERROR_INVALID_TASK,								//IOCP 큐에서 비정상적인 작업이 발생
 
 	IOCP_ERROR_NOT_CREATE_IOCP,								//IOCP를 생성하지 않고 소켓관련 함수를 호출
+	IOCP_ERROR_SOCKET_NOT_CONNECT_IOCP,						//IOCP와 연결하지 않고 비동기 함수를 호출
 };

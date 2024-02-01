@@ -162,15 +162,16 @@ void IocpSocketHandler::resetBufferAndSetOverlappedIOInfo(OverlappedIOBuffer& ov
 	overlappedIOBuffer._overlappedIOInfo._index = _index;
 }
 
-IocpCommunicationManager::IocpCommunicationManager()
-{
-	_wsaStartupResult = (WSAStartup(MAKEWORD(2, 2), &_wsaData) == 0);
-}
-
 IocpCommunicationManager::~IocpCommunicationManager()
 {
 	if (_wsaStartupResult)
 		WSACleanup();
+}
+
+template<typename funcType, typename classType>
+static std::function<void(IocpSocketHandler&, bool)> createCallBackFunction(funcType*, classType*)
+{
+	return std::bind(&classType::functype, &classType, std::placeholders::_1, std::placeholders::_2);
 }
 
 IocpErrorCode IocpCommunicationManager::createIocp(const UINT32 maxIOThreadCount)
@@ -194,52 +195,13 @@ IocpErrorCode IocpCommunicationManager::connectIocpSocketHandler(IocpSocketHandl
 	return IocpErrorCode::NOT_IOCP_ERROR;
 }
 
-//IocpErrorCode IocpCommunicationManager::bindAndListen(const int bindPort)
-//{
-//	if (_isCreateIOCP == false)
-//		return IocpErrorCode::IOCP_ERROR_NOT_CREATE_IOCP;
-//
-//	//소켓 생성
-//	_listenSocket = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, nullptr, NULL, WSA_FLAG_OVERLAPPED);
-//	if (_listenSocket == INVALID_SOCKET)
-//		return IocpErrorCode::IOCP_ERROR_FAIL_CREATE_SOCKET;
-//
-//	//소켓 주소 정보
-//	SOCKADDR_IN bindAddressInfo;
-//	ZeroMemory(&bindAddressInfo, sizeof(bindAddressInfo));
-//	bindAddressInfo.sin_family = AF_INET;
-//	bindAddressInfo.sin_port = htons(bindPort);
-//	bindAddressInfo.sin_addr.s_addr = htonl(ADDR_ANY);
-//
-//	//bind
-//	if (bind(_listenSocket, reinterpret_cast<sockaddr*>(&bindAddressInfo), sizeof(SOCKADDR_IN)) == SOCKET_ERROR)
-//	{
-//		closesocket(_listenSocket);
-//		return IocpErrorCode::IOCP_ERROR_FAIL_BIND_SOCKET;
-//	}
-//
-//	//listen
-//	if (listen(_listenSocket, static_cast<int>(BACKLOG_SIZE)) == SOCKET_ERROR)
-//	{
-//		closesocket(_listenSocket);
-//		return IocpErrorCode::IOCP_ERROR_FAIL_LISTEN_SOCKET;
-//	}
-//
-//	//Server Socket IOCP Connect
-//	HANDLE resultHandle = CreateIoCompletionPort(reinterpret_cast<HANDLE>(_listenSocket), _iocpHandle, (UINT32)0, 0);
-//	if (resultHandle == INVALID_HANDLE_VALUE)
-//	{
-//		closesocket(_listenSocket);
-//		return IocpErrorCode::IOCP_ERROR_FAIL_CONNECT_SOCKET_TO_IOCP;
-//	}
-//
-//	return IocpErrorCode::NOT_IOCP_ERROR;
-//}
-
 IocpErrorCode IocpCommunicationManager::bindAndListen(IocpSocketHandler& connectSocketHandler, const int bindPort)
 {
 	if (_isCreateIOCP == false)
 		return IocpErrorCode::IOCP_ERROR_NOT_CREATE_IOCP;
+
+	if (connectSocketHandler.isIocpConnected() == false)
+		return IocpErrorCode::IOCP_ERROR_SOCKET_NOT_CONNECT_IOCP;
 
 	//소켓 주소 정보
 	SOCKADDR_IN bindAddressInfo;
@@ -276,6 +238,9 @@ IocpErrorCode IocpCommunicationManager::bindAndListen(IocpSocketHandler& connect
 
 IocpErrorCode IocpCommunicationManager::connectSocket(IocpSocketHandler& connectSocketHandler, const std::string& ipAddress, const int bindPort)
 {
+	if (connectSocketHandler.isIocpConnected() == false)
+		return IocpErrorCode::IOCP_ERROR_SOCKET_NOT_CONNECT_IOCP;
+
 	//소켓 주소 정보
 	SOCKADDR_IN connectAddressInfo;
 	connectAddressInfo.sin_family = AF_INET;
@@ -285,9 +250,6 @@ IocpErrorCode IocpCommunicationManager::connectSocket(IocpSocketHandler& connect
 	const int connectResult = connect(connectSocketHandler.getSocket(), (sockaddr*)&connectAddressInfo, sizeof(sockaddr));
 	if (connectResult == SOCKET_ERROR)
 		return IocpErrorCode::IOCP_ERROR_FAIL_CONNECT_SOCKET;
-
-	if (connectSocketHandler.bindRecv() == false)
-		return IocpErrorCode::IOCP_ERROR_FAIL_ASYNC_RECEIVE;
 	
 	return IocpErrorCode::NOT_IOCP_ERROR;
 }
@@ -316,9 +278,9 @@ IocpErrorCode IocpCommunicationManager::workIocpQueue(const DWORD timeoutMillise
 	DWORD					ioSize = 0;
 	bool					isSuccess = false;
 
-	isSuccess = GetQueuedCompletionStatus(_iocpHandle, &ioSize, reinterpret_cast<PULONG_PTR>(&IocpSocketHandler), &lpOverlapped, 0);
+	isSuccess = GetQueuedCompletionStatus(_iocpHandle, &ioSize, reinterpret_cast<PULONG_PTR>(&IocpSocketHandler), &lpOverlapped, timeoutMilliseconds);
 	if ((isSuccess == false) && (lpOverlapped == nullptr))
-		return IocpErrorCode::IOCP_NO_TASK;
+		return IocpErrorCode::NOT_IOCP_ERROR;
 
 	if ((lpOverlapped == nullptr) || ((isSuccess == true) && (ioSize == 0)))
 		return IocpErrorCode::IOCP_ERROR_INVALID_TASK;
@@ -329,7 +291,7 @@ IocpErrorCode IocpCommunicationManager::workIocpQueue(const DWORD timeoutMillise
 		if (IocpSocketHandler != nullptr)
 			_callBack_closeSocket(*IocpSocketHandler, false);
 
-		return IocpErrorCode::NOT_IOCP_ERROR;
+		return IocpErrorCode::IOCP_ERROR_INVALID_TASK;
 	}
 
 	switch (overlappedIOInfo->_operationType)

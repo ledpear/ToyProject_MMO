@@ -60,8 +60,20 @@ class IocpCommunicationManager
 	// 
 
 public:
-	IocpCommunicationManager();
+	template<typename classType, typename funcType>
+	explicit IocpCommunicationManager(classType* ownerInstance, funcType callBack_closeSocket, funcType callBack_accept, funcType callBack_send, funcType callBack_receive)
+		: _callBackFunctionOwnerInstance(ownerInstance)
+		, _callBack_closeSocket(std::bind(callBack_closeSocket, ownerInstance, std::placeholders::_1, std::placeholders::_2))
+		, _callBack_accept(std::bind(callBack_accept, ownerInstance, std::placeholders::_1, std::placeholders::_2))
+		, _callBack_send(std::bind(callBack_send, ownerInstance, std::placeholders::_1, std::placeholders::_2))
+		, _callBack_receive(std::bind(callBack_receive, ownerInstance, std::placeholders::_1, std::placeholders::_2))
+	{
+		_wsaStartupResult = (WSAStartup(MAKEWORD(2, 2), &_wsaData) == 0);
+	}
 	~IocpCommunicationManager();
+
+	template<typename funcType,typename classType>
+	static std::function<void(IocpSocketHandler&, bool)> createCallBackFunction(funcType*, classType*);
 
 	IocpErrorCode	createIocp(const UINT32 maxIOThreadCount);
 	IocpErrorCode	connectIocpSocketHandler(IocpSocketHandler& connectSocketHandler);
@@ -74,20 +86,17 @@ public:
 	//각 작업 종류에 따라 콜백함수를 호출하는 함수
 	IocpErrorCode	workIocpQueue(const DWORD timeoutMilliseconds);
 
-	//IocpErrorCode	runThread();
-
 private:
 	WSADATA							_wsaData;
 
-	std::function<void(IocpSocketHandler& socketIocpController, bool isForce)>	_callBack_closeSocket;
-	std::function<void(IocpSocketHandler& socketIocpController, bool isForce)>	_callBack_accept;
-	std::function<void(IocpSocketHandler& socketIocpController, bool isForce)>	_callBack_send;
-	std::function<void(IocpSocketHandler& socketIocpController, bool isForce)>	_callBack_receive;
+	const std::function<void(IocpSocketHandler& socketIocpController, bool isForce)>	_callBack_closeSocket;
+	const std::function<void(IocpSocketHandler& socketIocpController, bool isForce)>	_callBack_accept;
+	const std::function<void(IocpSocketHandler& socketIocpController, bool isForce)>	_callBack_send;
+	const std::function<void(IocpSocketHandler& socketIocpController, bool isForce)>	_callBack_receive;
+	void* _callBackFunctionOwnerInstance = nullptr;
 
-	//SOCKET							_listenSocket;
 	HANDLE							_iocpHandle = nullptr;
 	UINT32							_maxIOThreadCount = 0;
-
 
 	bool							_wsaStartupResult = false;
 	bool							_isCreateIOCP = false;
