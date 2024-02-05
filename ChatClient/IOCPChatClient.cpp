@@ -4,6 +4,9 @@
 
 #include "IOCPChatClient.h"
 
+#include "PacketDefine.h"
+#include "IocpCommunication.h"
+
 #pragma comment(lib,"ws2_32.lib")
 #pragma comment(lib,"mswsock.lib")  // ConnectEx()
 
@@ -56,9 +59,9 @@ void IOCPChatClient::run()
 {
 	{
 		//쓰레드 실행
-		if (_iocpSocketHandler.bindRecv() == false)
+		if (_iocpSocketHandler.bindReceive() == false)
 		{
-			printf("[run] bindRecv Fail\n");
+			printf("[run] bindReceive Fail\n");
 			_iocpSocketHandler.close();
 			return;
 		}
@@ -102,12 +105,12 @@ void IOCPChatClient::sendComplete(IocpSocketHandler& socketIocpController, bool 
 void IOCPChatClient::receiveComplete(IocpSocketHandler& socketIocpController, bool isForce)
 {
 
-	std::string msgString(socketIocpController.getRecvBuffer()._buffer);
+	std::string msgString(socketIocpController.getReceiveBuffer()._buffer);
 	printf("%s\n", msgString.c_str());
 
-	if (_iocpSocketHandler.bindRecv() == false)
+	if (_iocpSocketHandler.bindReceive() == false)
 	{
-		printf("[run] bindRecv Fail\n");
+		printf("[run] bindReceive Fail\n");
 		_iocpSocketHandler.close();
 		return;
 	}
@@ -115,11 +118,6 @@ void IOCPChatClient::receiveComplete(IocpSocketHandler& socketIocpController, bo
 
 void IOCPChatClient::workThreadMain()
 {
-	bool				isSuccess = false;
-	DWORD				ioSize = 0;
-	LPOVERLAPPED		lpOverlapped = nullptr;
-	IocpSocketHandler*	socketIocpController = nullptr;	
-
 	while (_isWorkThreadRun)
 	{
 		if (_iocpCommunicationManager.workIocpQueue(INFINITE) != IocpErrorCode::NOT_IOCP_ERROR)

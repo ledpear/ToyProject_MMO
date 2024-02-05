@@ -20,29 +20,33 @@ public:
 	inline const bool			isSocketConnected()	const { return _isSocketConnected; }
 	inline const bool			isIocpConnected()	const { return _isIocpConnected; }
 	inline const UINT32			getIndex()			const { return _index; }
+	inline void					connectComplete()	{ _isSocketConnected = true; }
 	inline SOCKET&				getSocket()			{ return _iocpSocket; }
-	inline OverlappedIOBuffer&	getRecvBuffer()		{ return _overlappedRecvBuffer; }
+	inline OverlappedIOBuffer&	getAcceptBuffer()	{ return _overlappedAcceptBuffer; }
 	inline OverlappedIOBuffer&	getSendBuffer()		{ return _overlappedSendBuffer; }
+	inline OverlappedIOBuffer&	getReceiveBuffer()	{ return _overlappedReceiveBuffer; }
 
-	bool initialize(const UINT32 index);
-	bool connectIOCP();
+	DWORD initialize(const UINT32 index = 0);
+	DWORD acceptAsync(SOCKET listenSocket);
+	void getAcceptAddressInfo(_Out_ std::string& acceptIp, _Out_ int& acceptPort);
 
-	bool acceptAsync(SOCKET listenSock);
-	bool acceptCompletion();
+	int bindAddressInfo(const ULONG ipAddress, const USHORT bindPort);
+	int bindAddressInfo(const std::string& ipAddress, const int bindPort);
+	int connectSocket(const std::string& ipAddress, const int bindPort);
+	int listenStart();
 
-	bool bindRecv();
-	bool sendMsg(const std::string& msgStirng);
+	DWORD bindReceive();
+	DWORD sendMsg(const std::string& msgStirng);
 	void close(bool isForce = false);
 
 private:
 	void resetBufferAndSetOverlappedIOInfo(OverlappedIOBuffer& overlappedIOBuffer, OperationType type);
 
 private:
-	OverlappedIOBuffer	_overlappedSendBuffer;
-	OverlappedIOBuffer	_overlappedRecvBuffer;
 	OverlappedIOBuffer	_overlappedAcceptBuffer;
+	OverlappedIOBuffer	_overlappedSendBuffer;
+	OverlappedIOBuffer	_overlappedReceiveBuffer;
 
-	HANDLE				_IOCPHandle = INVALID_HANDLE_VALUE;//To do delete
 	SOCKET				_iocpSocket = INVALID_SOCKET;
 
 	INT32				_index = -1;//To do delete
@@ -57,7 +61,7 @@ class IocpCommunicationManager
 	// 여러개의 소켓을 생성하고 관리한다.
 	// -> 소켓을 생성하는건 외부에서 하고 여기선 컨트롤만한다
 	// 통신 결과에 따라 콜백 함수가 실행된다.
-	// 
+	// 레거시 소켓 함수는 여기서 사용하지 않는다. IocpSocketHandler에서만 다룬다.
 
 public:
 	template<typename classType, typename funcType>
@@ -76,23 +80,22 @@ public:
 	static std::function<void(IocpSocketHandler&, bool)> createCallBackFunction(funcType*, classType*);
 
 	IocpErrorCode	createIocp(const UINT32 maxIOThreadCount);
-	IocpErrorCode	connectIocpSocketHandler(IocpSocketHandler& connectSocketHandler);
+	IocpErrorCode	connectIocpSocketHandler(IocpSocketHandler& targetSocketHandler);
 
-	IocpErrorCode	bindAndListen(IocpSocketHandler& connectSocketHandler, const int bindPort);
-	IocpErrorCode	connectSocket(IocpSocketHandler& connectSocketHandler,const std::string& ipAddress, const int bindPort);
+	IocpErrorCode	bindAndListen(IocpSocketHandler& targetSocketHandler, const int bindPort);
+	IocpErrorCode	acceptSocket(IocpSocketHandler& targetSocketHandler, IocpSocketHandler& listenSocketHandler);
+	IocpErrorCode	connectSocket(IocpSocketHandler& targetSocketHandler, const std::string& ipAddress, const int bindPort);
+	IocpErrorCode	receiveSocket(IocpSocketHandler& targetSocketHandler);
 
-	//IOCP 작업을 하나씩 꺼내서 처리하는 함수
-	const OverlappedIOInfo* getIocpTask(const DWORD timeoutMilliseconds);
-	//각 작업 종류에 따라 콜백함수를 호출하는 함수
 	IocpErrorCode	workIocpQueue(const DWORD timeoutMilliseconds);
 
 private:
 	WSADATA							_wsaData;
 
-	const std::function<void(IocpSocketHandler& socketIocpController, bool isForce)>	_callBack_closeSocket;
-	const std::function<void(IocpSocketHandler& socketIocpController, bool isForce)>	_callBack_accept;
-	const std::function<void(IocpSocketHandler& socketIocpController, bool isForce)>	_callBack_send;
-	const std::function<void(IocpSocketHandler& socketIocpController, bool isForce)>	_callBack_receive;
+	const std::function<void(IocpSocketHandler* iocpSocketHandler, bool isForce)>	_callBack_closeSocket;
+	const std::function<void(IocpSocketHandler* iocpSocketHandler, bool isForce)>	_callBack_accept;
+	const std::function<void(IocpSocketHandler* iocpSocketHandler, bool isForce)>	_callBack_send;
+	const std::function<void(IocpSocketHandler* iocpSocketHandler, bool isForce)>	_callBack_receive;
 	void* _callBackFunctionOwnerInstance = nullptr;
 
 	HANDLE							_iocpHandle = nullptr;

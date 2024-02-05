@@ -5,6 +5,7 @@
 #include <mutex>
 #include <functional>
 
+//전방선언으로 처리하고 헤더를 없앤다.
 #include "PacketDefine.h"
 #include "IocpCommunication.h"
 

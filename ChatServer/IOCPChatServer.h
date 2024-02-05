@@ -3,10 +3,11 @@
 #include <vector>
 #include <thread>
 #include <mutex>
+#include <memory>
 
-#include "../Common/PacketDefine.h"
-
-class SocketIocpController;
+#include "IocpCommunication.h"
+//class IocpSocketHandler;
+//class IocpCommunicationManager;
 
 class IOCPChatServer
 {
@@ -20,22 +21,27 @@ public:
 	void shutdown();
 
 private:
-	SocketIocpController* getAvailableSocketIocpController();
+	IocpSocketHandler* getAvailableSocketIocpController();
 
 	void createWorkThread();
 	void workThreadMain();
 
-	void closeSocketIocpControllerAndStartAccept(SocketIocpController& socketIocpController, bool isForce = false);
+	void closeSocketIocpControllerAndStartAccept(IocpSocketHandler* iocpSocketHandler, bool isForce = false);
 	void sendMsgAllClients(const std::string& msgStirng);
+
+	void closeSocketComplete(IocpSocketHandler* iocpSocketHandler, bool isForce);
+	void acceptComplete(IocpSocketHandler* iocpSocketHandler, bool isForce);
+	void sendComplete(IocpSocketHandler* iocpSocketHandler, bool isForce);
+	void receiveComplete(IocpSocketHandler* iocpSocketHandler, bool isForce);
 
 private:
 	std::vector<std::thread>		_workThreads;
 	//채팅을 보낼 때 반복해서 순회해야하기 때문에 vector로 결정
-	std::vector<std::unique_ptr<SocketIocpController>>	_socketIocpControllers;
-	std::mutex						_socketIocpControllersLock;
+	std::unique_ptr<IocpCommunicationManager>		_iocpCommunicationManager;
+	std::vector<std::unique_ptr<IocpSocketHandler>>	_iocpSocketHandlers;
+	std::unique_ptr<IocpSocketHandler>				_listenSocketHandler;
+	std::mutex										_iocpSocketHandlersLock;
 	WSADATA							_wsaData;
-	SOCKET							_serverSock;
-	HANDLE							_iocpHandle			= nullptr;
 	UINT32							_maxIOThreadCount	= 0;
 	UINT32							_maxClientCount		= 0;
 	bool							_wsaStartupResult	= false;

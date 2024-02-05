@@ -3,6 +3,7 @@
 #include <string>
 #include <iostream>
 #include "IOCPChatServer.h"
+#include "PacketDefine.h"
 
 constexpr static const UINT8	CLIENT_COUNT = 4;
 

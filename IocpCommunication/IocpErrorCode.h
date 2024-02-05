@@ -13,6 +13,7 @@ enum class IocpErrorCode
 	IOCP_ERROR_FAIL_CONNECT_SOCKET,							//소켓 LISTEN 실패
 	IOCP_ERROR_FAIL_CONNECT_SOCKET_TO_IOCP,					//소켓을 IOCP에 연결 실패
 	IOCP_ERROR_FAIL_ASYNC_RECEIVE,							//비동기 Receive 실패
+	IOCP_ERROR_FAIL_ASYNC_ACCEPT,							//비동기 Accept 실패
 
 	IOCP_ERROR_INVALID_TASK,								//IOCP 큐에서 비정상적인 작업이 발생
 
