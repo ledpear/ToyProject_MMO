@@ -162,6 +162,12 @@ void IOCPChatServer::closeSocketIocpControllerAndStartAccept(IocpSocketHandler& 
 		return;
 	}
 
+	if(_iocpCommunicationManager->connectIocpSocketHandler(iocpSocketHandler) != IocpErrorCode::NOT_IOCP_ERROR)
+	{
+		printf_s("[Index:%d] connectIocpSocketHandler Fail.\n", clientIndex);
+		return;
+	}
+
 	if (_iocpCommunicationManager->acceptSocket(iocpSocketHandler, *_listenSocketHandler.get()) != IocpErrorCode::NOT_IOCP_ERROR)
 	{
 		printf_s("[Index:%d] acceptAsync Fail.\n", clientIndex);
