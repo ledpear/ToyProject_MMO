@@ -5,9 +5,11 @@
 #include <mutex>
 #include <memory>
 
-#include "IocpCommunication.h"
-//class IocpSocketHandler;
-//class IocpCommunicationManager;
+#include <WinSock2.h>
+
+class IocpSocketHandler;
+class IocpCommunicationManager;
+struct OverlappedIOInfo;
 
 class IOCPChatServer
 {
@@ -21,18 +23,18 @@ public:
 	void shutdown();
 
 private:
-	IocpSocketHandler* getAvailableSocketIocpController();
+	IocpSocketHandler* getAvailableIocpSocketHandler();
 
 	void createWorkThread();
 	void workThreadMain();
 
-	void closeSocketIocpControllerAndStartAccept(IocpSocketHandler* iocpSocketHandler, bool isForce = false);
+	void closeSocketIocpControllerAndStartAccept(IocpSocketHandler& iocpSocketHandler, bool isForce = false);
 	void sendMsgAllClients(const std::string& msgStirng);
 
-	void closeSocketComplete(IocpSocketHandler* iocpSocketHandler, bool isForce);
-	void acceptComplete(IocpSocketHandler* iocpSocketHandler, bool isForce);
-	void sendComplete(IocpSocketHandler* iocpSocketHandler, bool isForce);
-	void receiveComplete(IocpSocketHandler* iocpSocketHandler, bool isForce);
+	void closeSocketComplete(IocpSocketHandler& iocpSocketHandler, OverlappedIOInfo& overlappedIOInfo);
+	void acceptComplete(IocpSocketHandler& iocpSocketHandler, OverlappedIOInfo& overlappedIOInfo);
+	void sendComplete(IocpSocketHandler& iocpSocketHandler, OverlappedIOInfo& overlappedIOInfo);
+	void receiveComplete(IocpSocketHandler& iocpSocketHandler, OverlappedIOInfo& overlappedIOInfo);
 
 private:
 	std::vector<std::thread>		_workThreads;

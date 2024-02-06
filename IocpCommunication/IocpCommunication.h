@@ -92,10 +92,10 @@ public:
 private:
 	WSADATA							_wsaData;
 
-	const std::function<void(IocpSocketHandler* iocpSocketHandler, bool isForce)>	_callBack_closeSocket;
-	const std::function<void(IocpSocketHandler* iocpSocketHandler, bool isForce)>	_callBack_accept;
-	const std::function<void(IocpSocketHandler* iocpSocketHandler, bool isForce)>	_callBack_send;
-	const std::function<void(IocpSocketHandler* iocpSocketHandler, bool isForce)>	_callBack_receive;
+	const std::function<void(IocpSocketHandler& iocpSocketHandler, OverlappedIOInfo& overlappedIOInfo)>	_callBack_closeSocket;
+	const std::function<void(IocpSocketHandler& iocpSocketHandler, OverlappedIOInfo& overlappedIOInfo)>	_callBack_accept;
+	const std::function<void(IocpSocketHandler& iocpSocketHandler, OverlappedIOInfo& overlappedIOInfo)>	_callBack_send;
+	const std::function<void(IocpSocketHandler& iocpSocketHandler, OverlappedIOInfo& overlappedIOInfo)>	_callBack_receive;
 	void* _callBackFunctionOwnerInstance = nullptr;
 
 	HANDLE							_iocpHandle = nullptr;

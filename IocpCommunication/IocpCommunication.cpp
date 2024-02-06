@@ -39,6 +39,9 @@ DWORD IocpSocketHandler::initialize(const UINT32 index)
 
 DWORD IocpSocketHandler::acceptAsync(SOCKET listenSocket)
 {
+	//if (_isIocpConnected == false)
+	//	return WSAENOTCONN;
+
 	OverlappedIOInfo& acceptIOInfo = _overlappedAcceptBuffer._overlappedIOInfo;
 	ZeroMemory(&acceptIOInfo, sizeof(OverlappedIOInfo));
 
@@ -78,7 +81,7 @@ int IocpSocketHandler::bindAddressInfo(const ULONG ipAddress, const USHORT bindP
 	ZeroMemory(&bindAddressInfo, sizeof(bindAddressInfo));
 	bindAddressInfo.sin_family = AF_INET;
 	bindAddressInfo.sin_addr.s_addr = ipAddress;
-	bindAddressInfo.sin_port = bindPort;
+	bindAddressInfo.sin_port = htons(bindPort);;
 
 	//bind
 	int bindResult = bind(_iocpSocket, reinterpret_cast<sockaddr*>(&bindAddressInfo), sizeof(SOCKADDR_IN));
@@ -139,7 +142,7 @@ DWORD IocpSocketHandler::bindReceive()
 	if ((result == SOCKET_ERROR) && (WSAGetLastError() != ERROR_IO_PENDING))
 		return lastError;
 
-	return lastError;
+	return ERROR_SUCCESS;
 }
 
 DWORD IocpSocketHandler::sendMsg(const std::string& msgStirng)
@@ -158,7 +161,7 @@ DWORD IocpSocketHandler::sendMsg(const std::string& msgStirng)
 	if ((result == SOCKET_ERROR) && (WSAGetLastError() != ERROR_IO_PENDING))
 		return lastError;
 
-	return lastError;
+	return ERROR_SUCCESS;
 }
 
 void IocpSocketHandler::close(bool isForce)
@@ -225,19 +228,12 @@ IocpErrorCode IocpCommunicationManager::bindAndListen(IocpSocketHandler& targetS
 	if (_isCreateIOCP == false)
 		return IocpErrorCode::IOCP_ERROR_NOT_CREATE_IOCP;
 
-	if (targetSocketHandler.isIocpConnected() == false)
-		return IocpErrorCode::IOCP_ERROR_SOCKET_NOT_CONNECT_IOCP;
+	//if (targetSocketHandler.isIocpConnected() == false)
+	//	return IocpErrorCode::IOCP_ERROR_SOCKET_NOT_CONNECT_IOCP;
 
 	//소켓 주소 정보 bind
 	if (targetSocketHandler.bindAddressInfo(ADDR_ANY, bindPort) == SOCKET_ERROR)
 		return IocpErrorCode::IOCP_ERROR_FAIL_BIND_SOCKET;
-
-	//Server Socket IOCP Connect
-	if (connectIocpSocketHandler(targetSocketHandler) != IocpErrorCode::NOT_IOCP_ERROR)
-	{
-		targetSocketHandler.close();
-		return IocpErrorCode::IOCP_ERROR_FAIL_CONNECT_SOCKET_TO_IOCP;
-	}
 
 	//listen
 	if (targetSocketHandler.listenStart() == SOCKET_ERROR)
@@ -248,7 +244,7 @@ IocpErrorCode IocpCommunicationManager::bindAndListen(IocpSocketHandler& targetS
 
 IocpErrorCode IocpCommunicationManager::acceptSocket(IocpSocketHandler& targetSocketHandler, IocpSocketHandler& listenSocketHandler)
 {
-	if (targetSocketHandler.acceptAsync(listenSocketHandler.getSocket()) == false)
+	if (targetSocketHandler.acceptAsync(listenSocketHandler.getSocket()) != ERROR_SUCCESS)
 		return IocpErrorCode::IOCP_ERROR_FAIL_ASYNC_ACCEPT;
 		
 	return IocpErrorCode::NOT_IOCP_ERROR;
@@ -281,19 +277,19 @@ IocpErrorCode IocpCommunicationManager::workIocpQueue(const DWORD timeoutMillise
 	bool					isSuccess = false;
 
 	isSuccess = GetQueuedCompletionStatus(_iocpHandle, &ioSize, reinterpret_cast<PULONG_PTR>(&iocpSocketHandler), &lpOverlapped, timeoutMilliseconds);
-	if ((isSuccess == false) && (lpOverlapped == nullptr))
-		return IocpErrorCode::NOT_IOCP_ERROR;
+	if ((isSuccess == true) && (ioSize == 0) && (lpOverlapped == nullptr))
+		return IocpErrorCode::IOCP_ERROR_FAIL_COMMUNICATION;
 
-	if ((lpOverlapped == nullptr) || ((isSuccess == true) && (ioSize == 0)))
+	if (lpOverlapped == nullptr)
 		return IocpErrorCode::IOCP_ERROR_INVALID_TASK;
 
 	OverlappedIOInfo* overlappedIOInfo = reinterpret_cast<OverlappedIOInfo*>(lpOverlapped);
 	if ((isSuccess == false) || ((overlappedIOInfo->_operationType != OperationType::ACCEPT) && (ioSize == 0)))
 	{
 		if (iocpSocketHandler != nullptr)
-			_callBack_closeSocket(iocpSocketHandler, false);
+			_callBack_closeSocket(*iocpSocketHandler, *overlappedIOInfo);
 
-		return IocpErrorCode::IOCP_ERROR_INVALID_TASK;
+		return IocpErrorCode::IOCP_DISCONNECT_REQUEST;
 	}
 
 	switch (overlappedIOInfo->_operationType)
@@ -303,20 +299,20 @@ IocpErrorCode IocpCommunicationManager::workIocpQueue(const DWORD timeoutMillise
 		if (iocpSocketHandler != nullptr)
 		{
 			iocpSocketHandler->connectComplete();
-			_callBack_accept(iocpSocketHandler, false);
+			_callBack_accept(*iocpSocketHandler, *overlappedIOInfo);
 		}
 	}
 	break;
 	case OperationType::SEND:
 	{
 		if (iocpSocketHandler != nullptr)
-			_callBack_send(iocpSocketHandler, false);
+			_callBack_send(*iocpSocketHandler, *overlappedIOInfo);
 	}
 	break;
 	case OperationType::RECV:
 	{
 		if (iocpSocketHandler != nullptr)
-			_callBack_receive(iocpSocketHandler, false);
+			_callBack_receive(*iocpSocketHandler, *overlappedIOInfo);
 	}
 	break;
 	default:

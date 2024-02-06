@@ -5,7 +5,9 @@ enum class IocpErrorCode
 	NOT_IOCP_ERROR = 0,										//에러가 발생하지 않음
 
 	IOCP_NO_TASK = 100,										//IOCP Queue에 대기중인 작업이 없다.
+	IOCP_DISCONNECT_REQUEST,								//연결 종료 요청
 
+	IOCP_ERROR_FAIL_COMMUNICATION,							//통신 실패
 	IOCP_ERROR_FAIL_CREATE_IOCP = 1000,						//IOCP 생성 실패
 	IOCP_ERROR_FAIL_CREATE_SOCKET,							//소켓 생성 실패
 	IOCP_ERROR_FAIL_BIND_SOCKET,							//소켓 BIND 실패
