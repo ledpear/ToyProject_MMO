@@ -196,12 +196,6 @@ IocpCommunicationManager::~IocpCommunicationManager()
 		WSACleanup();
 }
 
-template<typename funcType, typename classType>
-static std::function<void(IocpSocketHandler&, bool)> createCallBackFunction(funcType*, classType*)
-{
-	return std::bind(&classType::functype, &classType, std::placeholders::_1, std::placeholders::_2);
-}
-
 IocpErrorCode IocpCommunicationManager::createIocp(const UINT32 maxIOThreadCount)
 {
 	_iocpHandle = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, maxIOThreadCount);
@@ -213,8 +207,11 @@ IocpErrorCode IocpCommunicationManager::createIocp(const UINT32 maxIOThreadCount
 	return IocpErrorCode::NOT_IOCP_ERROR;
 }
 
-IocpErrorCode IocpCommunicationManager::connectIocpSocketHandler(IocpSocketHandler& targetSocketHandler)
+IocpErrorCode IocpCommunicationManager::initializeAndConnectIocpSocketHandler(IocpSocketHandler& targetSocketHandler, const UINT32 index)
 {
+	if(targetSocketHandler.initialize(index) != ERROR_SUCCESS)
+		return IocpErrorCode::IOCP_ERROR_FAIL_INITIALIZE_SOCKET;
+
 	HANDLE resultHandle = CreateIoCompletionPort(reinterpret_cast<HANDLE>(targetSocketHandler.getSocket()), _iocpHandle, reinterpret_cast<ULONG_PTR>(&targetSocketHandler), 0);
 	if (resultHandle == INVALID_HANDLE_VALUE)
 		return IocpErrorCode::IOCP_ERROR_FAIL_CONNECT_SOCKET_TO_IOCP;
@@ -261,11 +258,34 @@ IocpErrorCode IocpCommunicationManager::connectSocket(IocpSocketHandler& targetS
 	return IocpErrorCode::NOT_IOCP_ERROR;
 }
 
+void IocpCommunicationManager::connectSocketComplete(IocpSocketHandler& targetSocketHandler, _Out_ std::string& acceptIp, _Out_ int& acceptPort)
+{
+	targetSocketHandler._isSocketConnected = true;
+	targetSocketHandler.getAcceptAddressInfo(acceptIp, acceptPort);
+}
+
 IocpErrorCode IocpCommunicationManager::receiveSocket(IocpSocketHandler& targetSocketHandler)
 {
 	if (targetSocketHandler.bindReceive() != ERROR_SUCCESS)
 		return IocpErrorCode::IOCP_ERROR_FAIL_ASYNC_RECEIVE;
 
+	return IocpErrorCode::NOT_IOCP_ERROR;
+}
+
+IocpErrorCode IocpCommunicationManager::sendMsgSocket(IocpSocketHandler& targetSocketHandler, const std::string& msgStirng)
+{
+	if (targetSocketHandler.isSocketConnected() == false)
+		return IocpErrorCode::IOCP_ERROR_SOCKET_NOT_CONNECT_IOCP;
+
+	if (targetSocketHandler.sendMsg(msgStirng) != ERROR_SUCCESS)
+		return IocpErrorCode::IOCP_ERROR_FAIL_ASYNC_SEND;
+
+	return IocpErrorCode::NOT_IOCP_ERROR;
+}
+
+IocpErrorCode IocpCommunicationManager::closeSocket(IocpSocketHandler& targetSocketHandler, bool isForce)
+{
+	targetSocketHandler.close();
 	return IocpErrorCode::NOT_IOCP_ERROR;
 }
 
@@ -320,4 +340,9 @@ IocpErrorCode IocpCommunicationManager::workIocpQueue(const DWORD timeoutMillise
 	}
 
 	return IocpErrorCode::NOT_IOCP_ERROR;
+}
+
+void IocpCommunicationManager::getReceiveMsg(IocpSocketHandler& targetSocketHandler, std::string& receiveMsg)
+{
+	receiveMsg = targetSocketHandler.getReceiveBuffer()._buffer;
 }

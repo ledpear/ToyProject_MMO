@@ -32,12 +32,11 @@ bool IOCPChatServer::initialize(const UINT32 maxIOThreadCount)
 	if (_iocpCommunicationManager->createIocp(maxIOThreadCount) != IocpErrorCode::NOT_IOCP_ERROR)
 		return false;
 
-	_maxIOThreadCount = maxIOThreadCount;
-
-	//accept 소켓 초기화
-	if (_listenSocketHandler->initialize() != ERROR_SUCCESS)
+	//listen 소켓 초기화
+	if (_iocpCommunicationManager->initializeAndConnectIocpSocketHandler(*_listenSocketHandler.get()) != IocpErrorCode::NOT_IOCP_ERROR)
 		return false;
 
+	_maxIOThreadCount = maxIOThreadCount;
 	return true;
 }
 
@@ -45,9 +44,6 @@ bool IOCPChatServer::bindAndListen(const int bindPort)
 {
 
 	if (_iocpCommunicationManager->bindAndListen(*_listenSocketHandler.get(), bindPort) != IocpErrorCode::NOT_IOCP_ERROR)
-		return false;
-
-	if (_iocpCommunicationManager->connectIocpSocketHandler(*_listenSocketHandler.get()) != IocpErrorCode::NOT_IOCP_ERROR)
 		return false;
 
 	return true;
@@ -64,14 +60,13 @@ bool IOCPChatServer::run(const UINT32 maxClientCount)
 	for (UINT32 index = 0; index < maxClientCount; ++index)
 	{
 		_iocpSocketHandlers.emplace_back(std::make_unique<IocpSocketHandler>());
-		_iocpSocketHandlers.back()->initialize(index);
+		_iocpCommunicationManager->initializeAndConnectIocpSocketHandler(*_iocpSocketHandlers.back().get(), index);
 	}
 
 	// 각 클라이언트 accept
 	bool isAcceptResult = true;
 	for (std::unique_ptr<IocpSocketHandler>& iocpSocketHandler : _iocpSocketHandlers)
 	{
-		isAcceptResult |= (_iocpCommunicationManager->connectIocpSocketHandler(*iocpSocketHandler.get()) == IocpErrorCode::NOT_IOCP_ERROR);
 		isAcceptResult |= (_iocpCommunicationManager->acceptSocket(*iocpSocketHandler.get(), *_listenSocketHandler.get()) == IocpErrorCode::NOT_IOCP_ERROR);
 		if (isAcceptResult == false)
 		{
@@ -102,7 +97,7 @@ void IOCPChatServer::shutdown()
 		workThread.join();
 
 	//리슨 소켓 종료
-	closesocket(_listenSocketHandler->getSocket());
+	_iocpCommunicationManager->closeSocket(*_listenSocketHandler.get());
 }
 
 IocpSocketHandler* IOCPChatServer::getAvailableIocpSocketHandler()
@@ -148,7 +143,7 @@ void IOCPChatServer::closeSocketIocpControllerAndStartAccept(IocpSocketHandler& 
 		return;
 
 	const UINT32 clientIndex = iocpSocketHandler.getIndex();
-	iocpSocketHandler.close(isForce);
+	_iocpCommunicationManager->closeSocket(iocpSocketHandler, isForce);
 
 	//접속해 있는 클라이언트에게 종료 알림 보내기
 	const std::string message(std::to_string(clientIndex) + " Index Client Exit");
@@ -156,15 +151,9 @@ void IOCPChatServer::closeSocketIocpControllerAndStartAccept(IocpSocketHandler& 
 	sendMsgAllClients(message.c_str());
 
 	//종료한 소켓 다시 비동기 Accept
-	if(iocpSocketHandler.initialize(clientIndex) != ERROR_SUCCESS)
+	if (_iocpCommunicationManager->initializeAndConnectIocpSocketHandler(iocpSocketHandler, clientIndex) != IocpErrorCode::NOT_IOCP_ERROR)
 	{
-		printf_s("[Index:%d] initialize Fail.\n", clientIndex);
-		return;
-	}
-
-	if(_iocpCommunicationManager->connectIocpSocketHandler(iocpSocketHandler) != IocpErrorCode::NOT_IOCP_ERROR)
-	{
-		printf_s("[Index:%d] connectIocpSocketHandler Fail.\n", clientIndex);
+		printf_s("[Index:%d] initializeAndConnectIocpSocketHandler Fail.\n", clientIndex);
 		return;
 	}
 
@@ -180,10 +169,8 @@ void IOCPChatServer::sendMsgAllClients(const std::string& msgStirng)
 	const std::lock_guard<std::mutex> lock(_iocpSocketHandlersLock);
 	for (std::unique_ptr<IocpSocketHandler>& iocpSocketHandler : _iocpSocketHandlers)
 	{
-		if (iocpSocketHandler->isSocketConnected() == false)
-			continue;
-
-		if (iocpSocketHandler->sendMsg(msgStirng) != ERROR_SUCCESS)
+		IocpErrorCode result = _iocpCommunicationManager->sendMsgSocket(*iocpSocketHandler.get(), msgStirng);
+		if (result == IocpErrorCode::IOCP_ERROR_FAIL_ASYNC_SEND)
 		{
 			closeSocketIocpControllerAndStartAccept(*iocpSocketHandler.get());
 			continue;
@@ -203,8 +190,7 @@ void IOCPChatServer::acceptComplete(IocpSocketHandler& iocpSocketHandler, Overla
 	int port = 0;
 	
 	std::unique_ptr<IocpSocketHandler>& acceptIocpSocketHandler = _iocpSocketHandlers[clientIndex];
-	acceptIocpSocketHandler->connectComplete();
-	acceptIocpSocketHandler->getAcceptAddressInfo(clientIP, port);
+	_iocpCommunicationManager->connectSocketComplete(*acceptIocpSocketHandler.get(), clientIP, port);
 	printf("Accept Completion Client : IP(%s) SOCKET(%d)\n", clientIP.c_str(), port);
 
 	if (_iocpCommunicationManager->receiveSocket(*acceptIocpSocketHandler) != IocpErrorCode::NOT_IOCP_ERROR)
@@ -226,7 +212,8 @@ void IOCPChatServer::sendComplete(IocpSocketHandler& iocpSocketHandler, Overlapp
 void IOCPChatServer::receiveComplete(IocpSocketHandler& iocpSocketHandler, OverlappedIOInfo& overlappedIOInfo)
 {
 	const UINT32 clientIndex = iocpSocketHandler.getIndex();
-	std::string msgString(iocpSocketHandler.getReceiveBuffer()._buffer);
+	std::string msgString;
+	_iocpCommunicationManager->getReceiveMsg(iocpSocketHandler, msgString);
 	msgString = "[index:" + std::to_string(clientIndex) + "] " + msgString;
 
 	printf_s("%s\n", msgString.c_str());

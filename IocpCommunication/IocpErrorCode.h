@@ -7,8 +7,9 @@ enum class IocpErrorCode
 	IOCP_NO_TASK = 100,										//IOCP Queue에 대기중인 작업이 없다.
 	IOCP_DISCONNECT_REQUEST,								//연결 종료 요청
 
-	IOCP_ERROR_FAIL_COMMUNICATION,							//통신 실패
-	IOCP_ERROR_FAIL_CREATE_IOCP = 1000,						//IOCP 생성 실패
+	IOCP_ERROR_FAIL_COMMUNICATION = 1000,					//통신 실패
+	IOCP_ERROR_FAIL_CREATE_IOCP,							//IOCP 생성 실패
+	IOCP_ERROR_FAIL_INITIALIZE_SOCKET,						//소켓 초기화 실패
 	IOCP_ERROR_FAIL_CREATE_SOCKET,							//소켓 생성 실패
 	IOCP_ERROR_FAIL_BIND_SOCKET,							//소켓 BIND 실패
 	IOCP_ERROR_FAIL_LISTEN_SOCKET,							//소켓 LISTEN 실패
@@ -16,6 +17,7 @@ enum class IocpErrorCode
 	IOCP_ERROR_FAIL_CONNECT_SOCKET_TO_IOCP,					//소켓을 IOCP에 연결 실패
 	IOCP_ERROR_FAIL_ASYNC_RECEIVE,							//비동기 Receive 실패
 	IOCP_ERROR_FAIL_ASYNC_ACCEPT,							//비동기 Accept 실패
+	IOCP_ERROR_FAIL_ASYNC_SEND,								//비동기 Send 실패
 
 	IOCP_ERROR_INVALID_TASK,								//IOCP 큐에서 비정상적인 작업이 발생
 

@@ -16,10 +16,11 @@ class IocpSocketHandler
 public:
 	IocpSocketHandler();
 	~IocpSocketHandler();
-
 	inline const bool			isSocketConnected()	const { return _isSocketConnected; }
 	inline const bool			isIocpConnected()	const { return _isIocpConnected; }
 	inline const UINT32			getIndex()			const { return _index; }
+
+private:
 	inline void					connectComplete()	{ _isSocketConnected = true; }
 	inline SOCKET&				getSocket()			{ return _iocpSocket; }
 	inline OverlappedIOBuffer&	getAcceptBuffer()	{ return _overlappedAcceptBuffer; }
@@ -39,7 +40,6 @@ public:
 	DWORD sendMsg(const std::string& msgStirng);
 	void close(bool isForce = false);
 
-private:
 	void resetBufferAndSetOverlappedIOInfo(OverlappedIOBuffer& overlappedIOBuffer, OperationType type);
 
 private:
@@ -76,18 +76,20 @@ public:
 	}
 	~IocpCommunicationManager();
 
-	template<typename funcType,typename classType>
-	static std::function<void(IocpSocketHandler&, bool)> createCallBackFunction(funcType*, classType*);
-
 	IocpErrorCode	createIocp(const UINT32 maxIOThreadCount);
-	IocpErrorCode	connectIocpSocketHandler(IocpSocketHandler& targetSocketHandler);
+	IocpErrorCode	initializeAndConnectIocpSocketHandler(IocpSocketHandler& targetSocketHandler, const UINT32 index = 0);
 
 	IocpErrorCode	bindAndListen(IocpSocketHandler& targetSocketHandler, const int bindPort);
 	IocpErrorCode	acceptSocket(IocpSocketHandler& targetSocketHandler, IocpSocketHandler& listenSocketHandler);
 	IocpErrorCode	connectSocket(IocpSocketHandler& targetSocketHandler, const std::string& ipAddress, const int bindPort);
+	void			connectSocketComplete(IocpSocketHandler& targetSocketHandler, _Out_ std::string& acceptIp, _Out_ int& acceptPort);
 	IocpErrorCode	receiveSocket(IocpSocketHandler& targetSocketHandler);
+	IocpErrorCode	sendMsgSocket(IocpSocketHandler& targetSocketHandler, const std::string& msgStirng);
+	IocpErrorCode	closeSocket(IocpSocketHandler& targetSocketHandler, bool isForce = false);
 
 	IocpErrorCode	workIocpQueue(const DWORD timeoutMilliseconds);
+
+	void			getReceiveMsg(IocpSocketHandler& targetSocketHandler, std::string& receiveMsg);
 
 private:
 	WSADATA							_wsaData;
