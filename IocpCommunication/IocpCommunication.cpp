@@ -39,8 +39,8 @@ DWORD IocpSocketHandler::initialize(const UINT32 index)
 
 DWORD IocpSocketHandler::acceptAsync(SOCKET listenSocket)
 {
-	//if (_isIocpConnected == false)
-	//	return WSAENOTCONN;
+	if (_isIocpConnected == false)
+		return WSAENOTCONN;
 
 	OverlappedIOInfo& acceptIOInfo = _overlappedAcceptBuffer._overlappedIOInfo;
 	ZeroMemory(&acceptIOInfo, sizeof(OverlappedIOInfo));
@@ -225,8 +225,8 @@ IocpErrorCode IocpCommunicationManager::bindAndListen(IocpSocketHandler& targetS
 	if (_isCreateIOCP == false)
 		return IocpErrorCode::IOCP_ERROR_NOT_CREATE_IOCP;
 
-	//if (targetSocketHandler.isIocpConnected() == false)
-	//	return IocpErrorCode::IOCP_ERROR_SOCKET_NOT_CONNECT_IOCP;
+	if (targetSocketHandler.isIocpConnected() == false)
+		return IocpErrorCode::IOCP_ERROR_SOCKET_NOT_CONNECT_IOCP;
 
 	//소켓 주소 정보 bind
 	if (targetSocketHandler.bindAddressInfo(ADDR_ANY, bindPort) == SOCKET_ERROR)

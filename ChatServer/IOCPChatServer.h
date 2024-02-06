@@ -37,10 +37,10 @@ private:
 	void receiveComplete(IocpSocketHandler& iocpSocketHandler, OverlappedIOInfo& overlappedIOInfo);
 
 private:
-	std::vector<std::thread>		_workThreads;
+	std::vector<std::thread>						_workThreads;
 	//채팅을 보낼 때 반복해서 순회해야하기 때문에 vector로 결정
-	std::unique_ptr<IocpCommunicationManager>		_iocpCommunicationManager;
 	std::vector<std::unique_ptr<IocpSocketHandler>>	_iocpSocketHandlers;
+	std::unique_ptr<IocpCommunicationManager>		_iocpCommunicationManager;
 	std::unique_ptr<IocpSocketHandler>				_listenSocketHandler;
 	std::mutex										_iocpSocketHandlersLock;
 	WSADATA							_wsaData;

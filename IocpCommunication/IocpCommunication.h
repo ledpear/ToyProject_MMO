@@ -9,7 +9,7 @@ class IocpSocketHandler
 	//클래스 명세
 	//Iocp 통신을 하기 위한 가장 하단의 객체
 	//Iocp 소켓 그 자체
-	//IocpSocketManager에서만 사용한다
+	//IocpSocketManager를 통해서 사용
 
 	friend class IocpCommunicationManager;
 
