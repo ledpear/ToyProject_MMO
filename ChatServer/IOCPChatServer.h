@@ -33,6 +33,7 @@ private:
 
 	void closeSocketComplete(IocpSocketHandler& iocpSocketHandler, OverlappedIOInfo& overlappedIOInfo);
 	void acceptComplete(IocpSocketHandler& iocpSocketHandler, OverlappedIOInfo& overlappedIOInfo);
+	void connectComplete(IocpSocketHandler& iocpSocketHandler, OverlappedIOInfo& overlappedIOInfo);
 	void sendComplete(IocpSocketHandler& iocpSocketHandler, OverlappedIOInfo& overlappedIOInfo);
 	void receiveComplete(IocpSocketHandler& iocpSocketHandler, OverlappedIOInfo& overlappedIOInfo);
 

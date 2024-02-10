@@ -10,7 +10,7 @@
 
 IOCPChatServer::IOCPChatServer()
 	: _iocpCommunicationManager(std::make_unique<IocpCommunicationManager>
-		(this, &IOCPChatServer::closeSocketComplete, &IOCPChatServer::acceptComplete, &IOCPChatServer::sendComplete, &IOCPChatServer::receiveComplete) )
+		(this, &IOCPChatServer::closeSocketComplete, &IOCPChatServer::acceptComplete, &IOCPChatServer::connectComplete, &IOCPChatServer::sendComplete, &IOCPChatServer::receiveComplete) )
 	, _listenSocketHandler(std::make_unique<IocpSocketHandler>())
 {
 	_wsaStartupResult = (WSAStartup(MAKEWORD(2, 2), &_wsaData) == 0);
@@ -191,7 +191,7 @@ void IOCPChatServer::acceptComplete(IocpSocketHandler& iocpSocketHandler, Overla
 	int port = 0;
 	
 	std::unique_ptr<IocpSocketHandler>& acceptIocpSocketHandler = _iocpSocketHandlers[clientIndex];
-	_iocpCommunicationManager->connectSocketComplete(*acceptIocpSocketHandler.get(), &clientIP, &port);
+	_iocpCommunicationManager->acceptComplete(*acceptIocpSocketHandler.get(), &clientIP, &port);
 	printf("Accept Completion Client : IP(%s) SOCKET(%d)\n", clientIP.c_str(), port);
 
 	if (_iocpCommunicationManager->receiveSocket(*acceptIocpSocketHandler) != IocpErrorCode::NOT_IOCP_ERROR)
@@ -204,6 +204,10 @@ void IOCPChatServer::acceptComplete(IocpSocketHandler& iocpSocketHandler, Overla
 	//접속해 있는 클라이언트에게 접속 알림 보내기
 	const std::string message(std::to_string(clientIndex) + " Index Client Access");
 	sendMsgAllClients(message.c_str());
+}
+
+void IOCPChatServer::connectComplete(IocpSocketHandler& iocpSocketHandler, OverlappedIOInfo& overlappedIOInfo)
+{
 }
 
 void IOCPChatServer::sendComplete(IocpSocketHandler& iocpSocketHandler, OverlappedIOInfo& overlappedIOInfo)

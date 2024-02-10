@@ -4,6 +4,8 @@
 #include "PacketDefine.h"
 #include "IocpErrorCode.h"
 
+#include <mswsock.h>
+
 class IocpSocketHandler
 {
 	//클래스 명세
@@ -86,7 +88,6 @@ public:
 	IocpErrorCode	connectSocket(IocpSocketHandler& targetSocketHandler, const std::string& ipAddress, const int bindPort);
 	IocpErrorCode	connectSocketAsync(IocpSocketHandler& targetSocketHandler, const std::string& ipAddress, const int bindPort);
 	void			acceptComplete(IocpSocketHandler& targetSocketHandler, _Out_ std::string* acceptIp = nullptr, _Out_ int* acceptPort = nullptr);
-	void			connectComplete(IocpSocketHandler& targetSocketHandler);
 	IocpErrorCode	receiveSocket(IocpSocketHandler& targetSocketHandler);
 	IocpErrorCode	sendMsgSocket(IocpSocketHandler& targetSocketHandler, const std::string& msgStirng);
 	IocpErrorCode	closeSocket(IocpSocketHandler& targetSocketHandler, bool isForce = false);
@@ -96,8 +97,6 @@ public:
 	void			getReceiveMsg(IocpSocketHandler& targetSocketHandler, std::string& receiveMsg);
 
 private:
-	void			setSocketConnected(IocpSocketHandler& targetSocketHandler);
-
 	WSADATA							_wsaData;
 
 	const std::function<void(IocpSocketHandler& iocpSocketHandler, OverlappedIOInfo& overlappedIOInfo)>	_callBack_closeSocket;

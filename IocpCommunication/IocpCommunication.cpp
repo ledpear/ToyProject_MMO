@@ -5,7 +5,6 @@
 #include "framework.h"
 
 #include <ws2tcpip.h>
-#include <mswsock.h>
 
 #include "PacketDefine.h"
 #include "IocpCommunication.h"
@@ -312,13 +311,8 @@ IocpErrorCode IocpCommunicationManager::connectSocketAsync(IocpSocketHandler& ta
 
 void IocpCommunicationManager::acceptComplete(IocpSocketHandler& targetSocketHandler, _Out_ std::string* acceptIp, _Out_ int* acceptPort)
 {
-	setSocketConnected(targetSocketHandler);
 	targetSocketHandler.getAcceptAddressInfo(acceptIp, acceptPort);
-}
-
-void IocpCommunicationManager::connectComplete(IocpSocketHandler& targetSocketHandler)
-{
-	setSocketConnected(targetSocketHandler);
+	targetSocketHandler.connectComplete();
 }
 
 IocpErrorCode IocpCommunicationManager::receiveSocket(IocpSocketHandler& targetSocketHandler)
@@ -385,7 +379,7 @@ IocpErrorCode IocpCommunicationManager::workIocpQueue(const DWORD timeoutMillise
 		if (iocpSocketHandler != nullptr)
 		{
 			iocpSocketHandler->connectComplete();
-			_callBack_accept(*iocpSocketHandler, *overlappedIOInfo);
+			_callBack_connect(*iocpSocketHandler, *overlappedIOInfo);
 		}
 	}
 	break;
@@ -411,9 +405,4 @@ IocpErrorCode IocpCommunicationManager::workIocpQueue(const DWORD timeoutMillise
 void IocpCommunicationManager::getReceiveMsg(IocpSocketHandler& targetSocketHandler, std::string& receiveMsg)
 {
 	receiveMsg = targetSocketHandler.getReceiveBuffer()._buffer;
-}
-
-void IocpCommunicationManager::setSocketConnected(IocpSocketHandler& targetSocketHandler)
-{
-	targetSocketHandler._isSocketConnected = true;
 }

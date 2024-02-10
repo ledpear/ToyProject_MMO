@@ -57,14 +57,7 @@ bool IOCPChatClient::connectServer(const std::string& ipAddress, const int bindP
 void IOCPChatClient::run()
 {
 	{
-		//쓰레드 실행
-		if(_iocpCommunicationManager->receiveSocket(*_iocpSocketHandler.get()) != IocpErrorCode::NOT_IOCP_ERROR)
-		{
-			printf("[run] bindReceive Fail\n");
-			_iocpCommunicationManager->closeSocket(*_iocpSocketHandler.get());
-			return;
-		}
-		
+		//쓰레드 실행		
 		_isWorkThreadRun = true;
 		_workThread = std::thread([this]() { workThreadMain(); });
 		printf_s("IOCPChatClient Start.\n");
@@ -99,7 +92,11 @@ void IOCPChatClient::acceptComplete(IocpSocketHandler& socketIocpController, Ove
 
 void IOCPChatClient::connectComplete(IocpSocketHandler& socketIocpController, OverlappedIOInfo& overlappedIOInfo)
 {
-	_iocpCommunicationManager->connectComplete(socketIocpController);
+	if (_iocpCommunicationManager->receiveSocket(*_iocpSocketHandler.get()) != IocpErrorCode::NOT_IOCP_ERROR)
+	{
+		printf("[connectComplete] bindReceive Fail\n");
+		_iocpCommunicationManager->closeSocket(*_iocpSocketHandler.get());
+	}
 }
 
 void IOCPChatClient::sendComplete(IocpSocketHandler& socketIocpController, OverlappedIOInfo& overlappedIOInfo)
