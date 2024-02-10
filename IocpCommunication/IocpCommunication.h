@@ -29,6 +29,7 @@ private:
 
 	DWORD initialize(const UINT32 index = 0);
 	DWORD acceptAsync(SOCKET listenSocket);
+	DWORD connectSocketAsync(const std::string& ipAddress, const int bindPort);
 	void getAcceptAddressInfo(_Out_ std::string* acceptIp = nullptr, _Out_ int* acceptPort = nullptr);
 
 	int bindAddressInfo(const ULONG ipAddress, const USHORT bindPort);
@@ -47,6 +48,7 @@ private:
 	OverlappedIOBuffer	_overlappedSendBuffer;
 	OverlappedIOBuffer	_overlappedReceiveBuffer;
 
+	LPFN_CONNECTEX		_connectEx = nullptr;
 	SOCKET				_iocpSocket = INVALID_SOCKET;
 
 	INT32				_index = -1;//To do delete
@@ -65,10 +67,10 @@ class IocpCommunicationManager
 
 public:
 	template<typename classType, typename funcType>
-	explicit IocpCommunicationManager(classType* ownerInstance, funcType callBack_closeSocket, funcType callBack_accept, funcType callBack_send, funcType callBack_receive)
-		: _callBackFunctionOwnerInstance(ownerInstance)
-		, _callBack_closeSocket(std::bind(callBack_closeSocket, ownerInstance, std::placeholders::_1, std::placeholders::_2))
+	explicit IocpCommunicationManager(classType* ownerInstance, funcType callBack_closeSocket, funcType callBack_accept, funcType callBack_connect, funcType callBack_send, funcType callBack_receive)
+		: _callBack_closeSocket(std::bind(callBack_closeSocket, ownerInstance, std::placeholders::_1, std::placeholders::_2))
 		, _callBack_accept(std::bind(callBack_accept, ownerInstance, std::placeholders::_1, std::placeholders::_2))
+		, _callBack_connect(std::bind(callBack_connect, ownerInstance, std::placeholders::_1, std::placeholders::_2))
 		, _callBack_send(std::bind(callBack_send, ownerInstance, std::placeholders::_1, std::placeholders::_2))
 		, _callBack_receive(std::bind(callBack_receive, ownerInstance, std::placeholders::_1, std::placeholders::_2))
 	{
@@ -82,7 +84,9 @@ public:
 	IocpErrorCode	bindAndListen(IocpSocketHandler& targetSocketHandler, const int bindPort);
 	IocpErrorCode	acceptSocket(IocpSocketHandler& targetSocketHandler, IocpSocketHandler& listenSocketHandler);
 	IocpErrorCode	connectSocket(IocpSocketHandler& targetSocketHandler, const std::string& ipAddress, const int bindPort);
-	void			connectSocketComplete(IocpSocketHandler& targetSocketHandler, _Out_ std::string* acceptIp = nullptr, _Out_ int* acceptPort = nullptr);
+	IocpErrorCode	connectSocketAsync(IocpSocketHandler& targetSocketHandler, const std::string& ipAddress, const int bindPort);
+	void			acceptComplete(IocpSocketHandler& targetSocketHandler, _Out_ std::string* acceptIp = nullptr, _Out_ int* acceptPort = nullptr);
+	void			connectComplete(IocpSocketHandler& targetSocketHandler);
 	IocpErrorCode	receiveSocket(IocpSocketHandler& targetSocketHandler);
 	IocpErrorCode	sendMsgSocket(IocpSocketHandler& targetSocketHandler, const std::string& msgStirng);
 	IocpErrorCode	closeSocket(IocpSocketHandler& targetSocketHandler, bool isForce = false);
@@ -92,10 +96,13 @@ public:
 	void			getReceiveMsg(IocpSocketHandler& targetSocketHandler, std::string& receiveMsg);
 
 private:
+	void			setSocketConnected(IocpSocketHandler& targetSocketHandler);
+
 	WSADATA							_wsaData;
 
 	const std::function<void(IocpSocketHandler& iocpSocketHandler, OverlappedIOInfo& overlappedIOInfo)>	_callBack_closeSocket;
 	const std::function<void(IocpSocketHandler& iocpSocketHandler, OverlappedIOInfo& overlappedIOInfo)>	_callBack_accept;
+	const std::function<void(IocpSocketHandler& iocpSocketHandler, OverlappedIOInfo& overlappedIOInfo)>	_callBack_connect;
 	const std::function<void(IocpSocketHandler& iocpSocketHandler, OverlappedIOInfo& overlappedIOInfo)>	_callBack_send;
 	const std::function<void(IocpSocketHandler& iocpSocketHandler, OverlappedIOInfo& overlappedIOInfo)>	_callBack_receive;
 

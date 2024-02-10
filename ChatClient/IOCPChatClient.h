@@ -22,6 +22,7 @@ public:
 
 	void closeSocketComplete(IocpSocketHandler& socketIocpController, OverlappedIOInfo& overlappedIOInfo);
 	void acceptComplete(IocpSocketHandler& socketIocpController, OverlappedIOInfo& overlappedIOInfo);
+	void connectComplete(IocpSocketHandler& socketIocpController, OverlappedIOInfo& overlappedIOInfo);
 	void sendComplete(IocpSocketHandler& socketIocpController, OverlappedIOInfo& overlappedIOInfo);
 	void receiveComplete(IocpSocketHandler& socketIocpController, OverlappedIOInfo& overlappedIOInfo);
 

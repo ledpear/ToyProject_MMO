@@ -12,7 +12,7 @@
 #pragma comment(lib,"mswsock.lib")  // ConnectEx()
 
 IOCPChatClient::IOCPChatClient()
-	: _iocpCommunicationManager(std::make_unique<IocpCommunicationManager>(this, &IOCPChatClient::closeSocketComplete, &IOCPChatClient::acceptComplete, &IOCPChatClient::sendComplete, &IOCPChatClient::receiveComplete))
+	: _iocpCommunicationManager(std::make_unique<IocpCommunicationManager>(this, &IOCPChatClient::closeSocketComplete, &IOCPChatClient::acceptComplete, &IOCPChatClient::connectComplete, &IOCPChatClient::sendComplete, &IOCPChatClient::receiveComplete))
 	, _iocpSocketHandler(std::make_unique<IocpSocketHandler>())
 {
 	_wsaStartupResult = (WSAStartup(MAKEWORD(2, 2), &_wsaData) == 0);
@@ -48,7 +48,7 @@ bool IOCPChatClient::initialize(const UINT32 maxIOThreadCount)
 
 bool IOCPChatClient::connectServer(const std::string& ipAddress, const int bindPort, std::function<void(bool)> callback)
 {
-	if (_iocpCommunicationManager->connectSocket(*_iocpSocketHandler.get(), ipAddress, bindPort) != IocpErrorCode::NOT_IOCP_ERROR)
+	if (_iocpCommunicationManager->connectSocketAsync(*_iocpSocketHandler.get(), ipAddress, bindPort) != IocpErrorCode::NOT_IOCP_ERROR)
 		return false;
 
 	return true;
@@ -95,7 +95,11 @@ void IOCPChatClient::closeSocketComplete(IocpSocketHandler& socketIocpController
 
 void IOCPChatClient::acceptComplete(IocpSocketHandler& socketIocpController, OverlappedIOInfo& overlappedIOInfo)
 {
-	_iocpCommunicationManager->connectSocketComplete(*_iocpSocketHandler.get());
+}
+
+void IOCPChatClient::connectComplete(IocpSocketHandler& socketIocpController, OverlappedIOInfo& overlappedIOInfo)
+{
+	_iocpCommunicationManager->connectComplete(socketIocpController);
 }
 
 void IOCPChatClient::sendComplete(IocpSocketHandler& socketIocpController, OverlappedIOInfo& overlappedIOInfo)

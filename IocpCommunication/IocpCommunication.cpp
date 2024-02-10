@@ -61,6 +61,44 @@ DWORD IocpSocketHandler::acceptAsync(SOCKET listenSocket)
 	return ERROR_SUCCESS;
 }
 
+DWORD IocpSocketHandler::connectSocketAsync(const std::string& ipAddress, const int bindPort)
+{
+	if (_isIocpConnected == false)
+		return WSAENOTCONN;
+
+	GUID guid = WSAID_CONNECTEX;
+	DWORD bytes = 0;
+	::WSAIoctl(_iocpSocket, SIO_GET_EXTENSION_FUNCTION_POINTER, (void*)&guid, sizeof(guid), (void*)&_connectEx, sizeof(_connectEx), &bytes, NULL, NULL);
+
+
+	OverlappedIOInfo& acceptIOInfo = _overlappedAcceptBuffer._overlappedIOInfo;
+	ZeroMemory(&acceptIOInfo, sizeof(OverlappedIOInfo));
+	acceptIOInfo._wsaBuf.len = 0;
+	acceptIOInfo._wsaBuf.buf = nullptr;
+	acceptIOInfo._operationType = OperationType::CONNECT;
+	acceptIOInfo._index = _index;
+
+	SOCKADDR_IN connectAddressInfo;
+	memset(&connectAddressInfo, 0, sizeof(connectAddressInfo));
+	connectAddressInfo.sin_family = AF_INET;
+	if (bind(_iocpSocket, reinterpret_cast<sockaddr*>(&connectAddressInfo), sizeof(SOCKADDR_IN)) == SOCKET_ERROR)
+	{
+		closesocket(_iocpSocket);
+		return SOCKET_ERROR;
+	}
+
+	connectAddressInfo.sin_port = htons(bindPort);
+	connectAddressInfo.sin_addr.s_addr = inet_addr(ipAddress.c_str());
+
+	if (_connectEx(_iocpSocket, (sockaddr*)&connectAddressInfo, sizeof(sockaddr), NULL, 0, &bytes, reinterpret_cast<LPWSAOVERLAPPED>(&acceptIOInfo)) == FALSE)
+	{
+		if (WSAGetLastError() != WSA_IO_PENDING)
+			return GetLastError();
+	}
+
+	return ERROR_SUCCESS;
+}
+
 void IocpSocketHandler::getAcceptAddressInfo(_Out_ std::string* acceptIp, _Out_ int* acceptPort)
 {
 	SOCKADDR* localAddr = nullptr;
@@ -261,10 +299,26 @@ IocpErrorCode IocpCommunicationManager::connectSocket(IocpSocketHandler& targetS
 	return IocpErrorCode::NOT_IOCP_ERROR;
 }
 
-void IocpCommunicationManager::connectSocketComplete(IocpSocketHandler& targetSocketHandler, _Out_ std::string* acceptIp, _Out_ int* acceptPort)
+IocpErrorCode IocpCommunicationManager::connectSocketAsync(IocpSocketHandler& targetSocketHandler, const std::string& ipAddress, const int bindPort)
 {
-	targetSocketHandler._isSocketConnected = true;
+	if (targetSocketHandler.isIocpConnected() == false)
+		return IocpErrorCode::IOCP_ERROR_SOCKET_NOT_CONNECT_IOCP;
+
+	if (targetSocketHandler.connectSocketAsync(ipAddress, bindPort) != ERROR_SUCCESS)
+		return IocpErrorCode::IOCP_ERROR_FAIL_CONNECT_SOCKET;
+
+	return IocpErrorCode::NOT_IOCP_ERROR;
+}
+
+void IocpCommunicationManager::acceptComplete(IocpSocketHandler& targetSocketHandler, _Out_ std::string* acceptIp, _Out_ int* acceptPort)
+{
+	setSocketConnected(targetSocketHandler);
 	targetSocketHandler.getAcceptAddressInfo(acceptIp, acceptPort);
+}
+
+void IocpCommunicationManager::connectComplete(IocpSocketHandler& targetSocketHandler)
+{
+	setSocketConnected(targetSocketHandler);
 }
 
 IocpErrorCode IocpCommunicationManager::receiveSocket(IocpSocketHandler& targetSocketHandler)
@@ -307,7 +361,7 @@ IocpErrorCode IocpCommunicationManager::workIocpQueue(const DWORD timeoutMillise
 		return IocpErrorCode::IOCP_ERROR_INVALID_TASK;
 
 	OverlappedIOInfo* overlappedIOInfo = reinterpret_cast<OverlappedIOInfo*>(lpOverlapped);
-	if ((isSuccess == false) || ((overlappedIOInfo->_operationType != OperationType::ACCEPT) && (ioSize == 0)))
+	if ((isSuccess == false) || ((overlappedIOInfo->_operationType != OperationType::ACCEPT) && (overlappedIOInfo->_operationType != OperationType::CONNECT) && (ioSize == 0)))
 	{
 		if (iocpSocketHandler != nullptr)
 			_callBack_closeSocket(*iocpSocketHandler, *overlappedIOInfo);
@@ -319,6 +373,15 @@ IocpErrorCode IocpCommunicationManager::workIocpQueue(const DWORD timeoutMillise
 	{
 	case OperationType::ACCEPT:
 	{		
+		if (iocpSocketHandler != nullptr)
+		{
+			iocpSocketHandler->connectComplete();
+			_callBack_accept(*iocpSocketHandler, *overlappedIOInfo);
+		}
+	}
+	break;
+	case OperationType::CONNECT:
+	{
 		if (iocpSocketHandler != nullptr)
 		{
 			iocpSocketHandler->connectComplete();
@@ -348,4 +411,9 @@ IocpErrorCode IocpCommunicationManager::workIocpQueue(const DWORD timeoutMillise
 void IocpCommunicationManager::getReceiveMsg(IocpSocketHandler& targetSocketHandler, std::string& receiveMsg)
 {
 	receiveMsg = targetSocketHandler.getReceiveBuffer()._buffer;
+}
+
+void IocpCommunicationManager::setSocketConnected(IocpSocketHandler& targetSocketHandler)
+{
+	targetSocketHandler._isSocketConnected = true;
 }
