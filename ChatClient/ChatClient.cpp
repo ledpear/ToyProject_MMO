@@ -2,7 +2,9 @@
 //
 
 #include <iostream>
+
 #include "IOCPChatClient.h"
+#include "PacketDefine.h"
 
 constexpr static const UINT8	CLIENT_WORK_THREAD_COUNT = 1;
 

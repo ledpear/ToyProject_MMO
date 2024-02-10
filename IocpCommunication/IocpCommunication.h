@@ -9,7 +9,7 @@ class IocpSocketHandler
 	//클래스 명세
 	//Iocp 통신을 하기 위한 가장 하단의 객체
 	//Iocp 소켓 그 자체
-	//IocpSocketManager를 통해서 사용
+	//IocpCommunicationManager를 통해서 사용
 
 	friend class IocpCommunicationManager;
 
@@ -29,7 +29,7 @@ private:
 
 	DWORD initialize(const UINT32 index = 0);
 	DWORD acceptAsync(SOCKET listenSocket);
-	void getAcceptAddressInfo(_Out_ std::string& acceptIp, _Out_ int& acceptPort);
+	void getAcceptAddressInfo(_Out_ std::string* acceptIp = nullptr, _Out_ int* acceptPort = nullptr);
 
 	int bindAddressInfo(const ULONG ipAddress, const USHORT bindPort);
 	int bindAddressInfo(const std::string& ipAddress, const int bindPort);
@@ -82,7 +82,7 @@ public:
 	IocpErrorCode	bindAndListen(IocpSocketHandler& targetSocketHandler, const int bindPort);
 	IocpErrorCode	acceptSocket(IocpSocketHandler& targetSocketHandler, IocpSocketHandler& listenSocketHandler);
 	IocpErrorCode	connectSocket(IocpSocketHandler& targetSocketHandler, const std::string& ipAddress, const int bindPort);
-	void			connectSocketComplete(IocpSocketHandler& targetSocketHandler, _Out_ std::string& acceptIp, _Out_ int& acceptPort);
+	void			connectSocketComplete(IocpSocketHandler& targetSocketHandler, _Out_ std::string* acceptIp = nullptr, _Out_ int* acceptPort = nullptr);
 	IocpErrorCode	receiveSocket(IocpSocketHandler& targetSocketHandler);
 	IocpErrorCode	sendMsgSocket(IocpSocketHandler& targetSocketHandler, const std::string& msgStirng);
 	IocpErrorCode	closeSocket(IocpSocketHandler& targetSocketHandler, bool isForce = false);
@@ -98,7 +98,6 @@ private:
 	const std::function<void(IocpSocketHandler& iocpSocketHandler, OverlappedIOInfo& overlappedIOInfo)>	_callBack_accept;
 	const std::function<void(IocpSocketHandler& iocpSocketHandler, OverlappedIOInfo& overlappedIOInfo)>	_callBack_send;
 	const std::function<void(IocpSocketHandler& iocpSocketHandler, OverlappedIOInfo& overlappedIOInfo)>	_callBack_receive;
-	void* _callBackFunctionOwnerInstance = nullptr;
 
 	HANDLE							_iocpHandle = nullptr;
 	UINT32							_maxIOThreadCount = 0;

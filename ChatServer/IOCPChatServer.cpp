@@ -9,7 +9,8 @@
 #pragma comment(lib,"ws2_32.lib")
 
 IOCPChatServer::IOCPChatServer()
-	: _iocpCommunicationManager(std::make_unique<IocpCommunicationManager>(this, &IOCPChatServer::closeSocketComplete, &IOCPChatServer::acceptComplete, &IOCPChatServer::sendComplete, &IOCPChatServer::receiveComplete) )
+	: _iocpCommunicationManager(std::make_unique<IocpCommunicationManager>
+		(this, &IOCPChatServer::closeSocketComplete, &IOCPChatServer::acceptComplete, &IOCPChatServer::sendComplete, &IOCPChatServer::receiveComplete) )
 	, _listenSocketHandler(std::make_unique<IocpSocketHandler>())
 {
 	_wsaStartupResult = (WSAStartup(MAKEWORD(2, 2), &_wsaData) == 0);
@@ -88,7 +89,7 @@ void IOCPChatServer::shutdown()
 		if (iocpSocketHandler->isSocketConnected() == false)
 			continue;
 
-		closeSocketIocpControllerAndStartAccept(*iocpSocketHandler.get());
+		_iocpCommunicationManager->closeSocket(*iocpSocketHandler.get());
 	}
 
 	//스레드 종료
@@ -190,7 +191,7 @@ void IOCPChatServer::acceptComplete(IocpSocketHandler& iocpSocketHandler, Overla
 	int port = 0;
 	
 	std::unique_ptr<IocpSocketHandler>& acceptIocpSocketHandler = _iocpSocketHandlers[clientIndex];
-	_iocpCommunicationManager->connectSocketComplete(*acceptIocpSocketHandler.get(), clientIP, port);
+	_iocpCommunicationManager->connectSocketComplete(*acceptIocpSocketHandler.get(), &clientIP, &port);
 	printf("Accept Completion Client : IP(%s) SOCKET(%d)\n", clientIP.c_str(), port);
 
 	if (_iocpCommunicationManager->receiveSocket(*acceptIocpSocketHandler) != IocpErrorCode::NOT_IOCP_ERROR)

@@ -61,7 +61,7 @@ DWORD IocpSocketHandler::acceptAsync(SOCKET listenSocket)
 	return ERROR_SUCCESS;
 }
 
-void IocpSocketHandler::getAcceptAddressInfo(_Out_ std::string& acceptIp, _Out_ int& acceptPort)
+void IocpSocketHandler::getAcceptAddressInfo(_Out_ std::string* acceptIp, _Out_ int* acceptPort)
 {
 	SOCKADDR* localAddr = nullptr;
 	SOCKADDR* remoteAddr = nullptr;
@@ -70,8 +70,11 @@ void IocpSocketHandler::getAcceptAddressInfo(_Out_ std::string& acceptIp, _Out_ 
 	GetAcceptExSockaddrs(_overlappedAcceptBuffer._buffer, 0, sizeof(SOCKADDR_IN) + 16, sizeof(SOCKADDR_IN) + 16, &localAddr, &localSize, &remoteAddr, &remoteSize);
 
 	inet_ntop(AF_INET, &(reinterpret_cast<SOCKADDR_IN*>(remoteAddr)->sin_addr), clientIP, sizeof(clientIP));
-	acceptIp = clientIP;
-	acceptPort = reinterpret_cast<SOCKADDR_IN*>(remoteAddr)->sin_port;
+	if(acceptIp != nullptr)
+		*acceptIp = clientIP;
+
+	if(acceptPort != nullptr)
+		*acceptPort = reinterpret_cast<SOCKADDR_IN*>(remoteAddr)->sin_port;
 }
 
 int IocpSocketHandler::bindAddressInfo(const ULONG ipAddress, const USHORT bindPort)
@@ -258,7 +261,7 @@ IocpErrorCode IocpCommunicationManager::connectSocket(IocpSocketHandler& targetS
 	return IocpErrorCode::NOT_IOCP_ERROR;
 }
 
-void IocpCommunicationManager::connectSocketComplete(IocpSocketHandler& targetSocketHandler, _Out_ std::string& acceptIp, _Out_ int& acceptPort)
+void IocpCommunicationManager::connectSocketComplete(IocpSocketHandler& targetSocketHandler, _Out_ std::string* acceptIp, _Out_ int* acceptPort)
 {
 	targetSocketHandler._isSocketConnected = true;
 	targetSocketHandler.getAcceptAddressInfo(acceptIp, acceptPort);

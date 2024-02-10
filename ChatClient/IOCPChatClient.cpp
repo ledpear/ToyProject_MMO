@@ -1,6 +1,7 @@
 #include <ws2tcpip.h>
 #include <mswsock.h>
 #include <WinSock2.h>
+#include <memory>
 
 #include "IOCPChatClient.h"
 
@@ -11,7 +12,8 @@
 #pragma comment(lib,"mswsock.lib")  // ConnectEx()
 
 IOCPChatClient::IOCPChatClient()
-	: _iocpCommunicationManager(this, &IOCPChatClient::closeSocketComplete, &IOCPChatClient::acceptComplete, &IOCPChatClient::sendComplete, &IOCPChatClient::receiveComplete)
+	: _iocpCommunicationManager(std::make_unique<IocpCommunicationManager>(this, &IOCPChatClient::closeSocketComplete, &IOCPChatClient::acceptComplete, &IOCPChatClient::sendComplete, &IOCPChatClient::receiveComplete))
+	, _iocpSocketHandler(std::make_unique<IocpSocketHandler>())
 {
 	_wsaStartupResult = (WSAStartup(MAKEWORD(2, 2), &_wsaData) == 0);
 }
@@ -19,7 +21,7 @@ IOCPChatClient::IOCPChatClient()
 IOCPChatClient::~IOCPChatClient()
 {
 	_workThread.join();
-	_iocpSocketHandler.close();
+	_iocpCommunicationManager->closeSocket(*_iocpSocketHandler.get());
 	if (_wsaStartupResult)
 		WSACleanup();
 }
@@ -31,11 +33,11 @@ bool IOCPChatClient::initialize(const UINT32 maxIOThreadCount)
 		return false;
 
 	// IO Completion Port 생성
-	if (_iocpCommunicationManager.createIocp(maxIOThreadCount) != IocpErrorCode::NOT_IOCP_ERROR)
+	if (_iocpCommunicationManager->createIocp(maxIOThreadCount) != IocpErrorCode::NOT_IOCP_ERROR)
 		return false;
 
 	_maxIOThreadCount = maxIOThreadCount;
-	if (_iocpSocketHandler.initialize(0) == false)
+	if(_iocpCommunicationManager->initializeAndConnectIocpSocketHandler(*_iocpSocketHandler.get()) != IocpErrorCode::NOT_IOCP_ERROR)
 	{
 		printf_s("[initialize] Socket IOCP Controller Initialize Fail\n");
 		return false;
@@ -46,10 +48,7 @@ bool IOCPChatClient::initialize(const UINT32 maxIOThreadCount)
 
 bool IOCPChatClient::connectServer(const std::string& ipAddress, const int bindPort, std::function<void(bool)> callback)
 {
-	if (_iocpCommunicationManager.connectIocpSocketHandler(_iocpSocketHandler) != IocpErrorCode::NOT_IOCP_ERROR)
-		return false;
-
-	if (_iocpCommunicationManager.connectSocket(_iocpSocketHandler, ipAddress, bindPort) != IocpErrorCode::NOT_IOCP_ERROR)
+	if (_iocpCommunicationManager->connectSocket(*_iocpSocketHandler.get(), ipAddress, bindPort) != IocpErrorCode::NOT_IOCP_ERROR)
 		return false;
 
 	return true;
@@ -59,10 +58,10 @@ void IOCPChatClient::run()
 {
 	{
 		//쓰레드 실행
-		if (_iocpSocketHandler.bindReceive() == false)
+		if(_iocpCommunicationManager->receiveSocket(*_iocpSocketHandler.get()) != IocpErrorCode::NOT_IOCP_ERROR)
 		{
 			printf("[run] bindReceive Fail\n");
-			_iocpSocketHandler.close();
+			_iocpCommunicationManager->closeSocket(*_iocpSocketHandler.get());
 			return;
 		}
 		
@@ -78,40 +77,41 @@ void IOCPChatClient::run()
 		if ((_strcmpi(sendMsg.c_str(), "q") == 0) || (_strcmpi(sendMsg.c_str(), "quit") == 0))
 		{
 			//연결 종료
-			_iocpSocketHandler.close();
+			_iocpCommunicationManager->closeSocket(*_iocpSocketHandler.get());
 			break;
 		}
 
-		if (_iocpSocketHandler.sendMsg(sendMsg) == false)
+		if(_iocpCommunicationManager->sendMsgSocket(*_iocpSocketHandler.get(), sendMsg) != IocpErrorCode::NOT_IOCP_ERROR)
 		{
 			printf("[sendMsg] Socket Iocp Controller sendMsg() Func Fail\n");
 		}
 	}
 }
 
-void IOCPChatClient::closeSocketComplete(IocpSocketHandler& socketIocpController, bool isForce)
+void IOCPChatClient::closeSocketComplete(IocpSocketHandler& socketIocpController, OverlappedIOInfo& overlappedIOInfo)
 {
-	_iocpSocketHandler.close();
+	_iocpCommunicationManager->closeSocket(*_iocpSocketHandler.get());
 }
 
-void IOCPChatClient::acceptComplete(IocpSocketHandler& socketIocpController, bool isForce)
+void IOCPChatClient::acceptComplete(IocpSocketHandler& socketIocpController, OverlappedIOInfo& overlappedIOInfo)
+{
+	_iocpCommunicationManager->connectSocketComplete(*_iocpSocketHandler.get());
+}
+
+void IOCPChatClient::sendComplete(IocpSocketHandler& socketIocpController, OverlappedIOInfo& overlappedIOInfo)
 {
 }
 
-void IOCPChatClient::sendComplete(IocpSocketHandler& socketIocpController, bool isForce)
+void IOCPChatClient::receiveComplete(IocpSocketHandler& socketIocpController, OverlappedIOInfo& overlappedIOInfo)
 {
-}
-
-void IOCPChatClient::receiveComplete(IocpSocketHandler& socketIocpController, bool isForce)
-{
-
-	std::string msgString(socketIocpController.getReceiveBuffer()._buffer);
+	std::string msgString;
+	_iocpCommunicationManager->getReceiveMsg(*_iocpSocketHandler.get(), msgString);
 	printf("%s\n", msgString.c_str());
 
-	if (_iocpSocketHandler.bindReceive() == false)
+	if (_iocpCommunicationManager->receiveSocket(*_iocpSocketHandler.get()) != IocpErrorCode::NOT_IOCP_ERROR)
 	{
 		printf("[run] bindReceive Fail\n");
-		_iocpSocketHandler.close();
+		_iocpCommunicationManager->closeSocket(*_iocpSocketHandler.get());
 		return;
 	}
 }
@@ -120,7 +120,7 @@ void IOCPChatClient::workThreadMain()
 {
 	while (_isWorkThreadRun)
 	{
-		if (_iocpCommunicationManager.workIocpQueue(INFINITE) != IocpErrorCode::NOT_IOCP_ERROR)
+		if (_iocpCommunicationManager->workIocpQueue(INFINITE) != IocpErrorCode::NOT_IOCP_ERROR)
 			break;
 	}
 }
