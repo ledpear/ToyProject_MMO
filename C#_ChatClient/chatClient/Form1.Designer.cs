@@ -28,36 +28,66 @@
         /// </summary>
         private void InitializeComponent()
         {
-            label1 = new Label();
-            button1 = new Button();
+            chatTextBox = new TextBox();
+            sendTextBox = new TextBox();
+            sendButton = new Button();
+            enterButton = new Button();
+            addressTextBox = new TextBox();
             SuspendLayout();
             // 
-            // label1
+            // chatTextBox
             // 
-            label1.AutoSize = true;
-            label1.Location = new Point(278, 55);
-            label1.Name = "label1";
-            label1.Size = new Size(66, 15);
-            label1.TabIndex = 0;
-            label1.Text = "Test Before";
+            chatTextBox.Location = new Point(12, 60);
+            chatTextBox.Multiline = true;
+            chatTextBox.Name = "chatTextBox";
+            chatTextBox.Size = new Size(414, 440);
+            chatTextBox.TabIndex = 0;
             // 
-            // button1
+            // sendTextBox
             // 
-            button1.Location = new Point(411, 55);
-            button1.Name = "button1";
-            button1.Size = new Size(75, 23);
-            button1.TabIndex = 1;
-            button1.Text = "Change";
-            button1.UseVisualStyleBackColor = true;
-            button1.Click += button1_Click;
+            sendTextBox.Location = new Point(12, 515);
+            sendTextBox.Name = "sendTextBox";
+            sendTextBox.Size = new Size(342, 23);
+            sendTextBox.TabIndex = 1;
+            sendTextBox.KeyPress += sendTextBox_KeyPress;
+            // 
+            // sendButton
+            // 
+            sendButton.Location = new Point(360, 515);
+            sendButton.Name = "sendButton";
+            sendButton.Size = new Size(66, 23);
+            sendButton.TabIndex = 2;
+            sendButton.Text = "전송";
+            sendButton.UseVisualStyleBackColor = true;
+            sendButton.Click += sendButton_Click;
+            // 
+            // enterButton
+            // 
+            enterButton.Location = new Point(351, 12);
+            enterButton.Name = "enterButton";
+            enterButton.Size = new Size(75, 23);
+            enterButton.TabIndex = 3;
+            enterButton.Text = "입장";
+            enterButton.UseVisualStyleBackColor = true;
+            enterButton.Click += enterButton_Click;
+            // 
+            // addressTextBox
+            // 
+            addressTextBox.Location = new Point(21, 16);
+            addressTextBox.Name = "addressTextBox";
+            addressTextBox.Size = new Size(196, 23);
+            addressTextBox.TabIndex = 4;
             // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(800, 450);
-            Controls.Add(button1);
-            Controls.Add(label1);
+            ClientSize = new Size(438, 558);
+            Controls.Add(addressTextBox);
+            Controls.Add(enterButton);
+            Controls.Add(sendButton);
+            Controls.Add(sendTextBox);
+            Controls.Add(chatTextBox);
             Name = "Form1";
             Text = "ChatClient";
             ResumeLayout(false);
@@ -66,7 +96,10 @@
 
         #endregion
 
-        private Label label1;
-        private Button button1;
+        private TextBox chatTextBox;
+        private TextBox sendTextBox;
+        private Button sendButton;
+        private Button enterButton;
+        private TextBox addressTextBox;
     }
 }
