@@ -19,11 +19,6 @@ namespace chatClient
             InitializeComponent();
         }
 
-        ~Form1()
-        {
-            CloseChat();
-        }
-
         private void enterButton_Click(object sender, EventArgs e)
         {
             if (isConnect == false)
@@ -68,8 +63,7 @@ namespace chatClient
         {
             try
             {
-                string sendString = message + "\r\n";
-                byte[] sendData = Encoding.Default.GetBytes(sendString);
+                byte[] sendData = Encoding.Default.GetBytes(message);
                 networkStream.Write(sendData, 0, sendData.Length);
             }
             catch (Exception Ex)
@@ -85,13 +79,21 @@ namespace chatClient
         private void startChat()
         {
             isConnect = true;
-            this.enterButton.Enabled = false;
+            this.enterButton.Text = "ÅðÀå";
+            SetText("ÀÔÀå\r\n");
+
         }
 
         private void CloseChat()
         {
             isConnect = false;
-            this.enterButton.Enabled = true;
+            this.enterButton.Text = "ÀÔÀå";
+            SetText("ÅðÀå\r\n");
+            CloseChatClient();
+        }
+
+        private void CloseChatClient()
+        {
             chatHandler.ChatClose();
             networkStream.Close();
             tcpClient.Close();
@@ -120,6 +122,12 @@ namespace chatClient
         {
             SendTextBoxMessage(sendTextBox.Text);
         }
+
+        private void Form1_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            CloseChatClient();
+            Application.Exit();
+        }
     }
 
     public class ChatHandler
@@ -131,10 +139,10 @@ namespace chatClient
 
         public void Setup(Form1 form1, NetworkStream networkStream, TextBox chatTextBox)
         {
-            this.form1 = form1;
-            this.networkStream = networkStream;
             this.chatTextBox = chatTextBox;
-            this.streamReader = new StreamReader(this.networkStream);
+            this.networkStream = networkStream;
+            this.form1 = form1;
+            this.streamReader = new StreamReader(networkStream);
         }
 
         public void ChatProcess()

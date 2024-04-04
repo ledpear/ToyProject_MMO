@@ -190,7 +190,7 @@ DWORD IocpSocketHandler::sendMsg(const std::string& msgStirng)
 	std::lock_guard<std::mutex> guard(_overlappedSendBuffer._mutex);
 
 	resetBufferAndSetOverlappedIOInfo(_overlappedSendBuffer, OperationType::SEND);
-	CopyMemory(_overlappedSendBuffer._overlappedIOInfo._wsaBuf.buf, msgStirng.c_str(), msgStirng.size());
+	CopyMemory(_overlappedSendBuffer._overlappedIOInfo._wsaBuf.buf, msgStirng.c_str(), msgStirng.size() + 1);
 
 	DWORD flag = 0;
 	DWORD numBytes = 0;

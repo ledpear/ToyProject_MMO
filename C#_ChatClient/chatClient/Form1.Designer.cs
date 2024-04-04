@@ -40,6 +40,8 @@
             chatTextBox.Location = new Point(12, 60);
             chatTextBox.Multiline = true;
             chatTextBox.Name = "chatTextBox";
+            chatTextBox.ReadOnly = true;
+            chatTextBox.ScrollBars = ScrollBars.Vertical;
             chatTextBox.Size = new Size(414, 440);
             chatTextBox.TabIndex = 0;
             // 
@@ -90,6 +92,7 @@
             Controls.Add(chatTextBox);
             Name = "Form1";
             Text = "ChatClient";
+            FormClosed += Form1_FormClosed;
             ResumeLayout(false);
             PerformLayout();
         }
