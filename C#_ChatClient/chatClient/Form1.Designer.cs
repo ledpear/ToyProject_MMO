@@ -79,6 +79,7 @@
             addressTextBox.Name = "addressTextBox";
             addressTextBox.Size = new Size(196, 23);
             addressTextBox.TabIndex = 4;
+            addressTextBox.Text = "127.0.0.1";
             // 
             // Form1
             // 

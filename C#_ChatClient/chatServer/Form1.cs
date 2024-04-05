@@ -12,6 +12,7 @@ namespace chatServer
         private bool isLive = false;
         TcpListener chatServerListener = new TcpListener(IPAddress.Parse("127.0.0.1"), 12000);
         public ArrayList clientSocketArray = new ArrayList();
+        Thread waitThread = null;
 
         public Form1()
         {
@@ -25,7 +26,7 @@ namespace chatServer
                 if (isLive == false)
                 {
                     chatServerListener.Start();
-                    Thread waitThread = new Thread(new ThreadStart(AcceptClient));
+                    waitThread = new Thread(new ThreadStart(AcceptClient));
                     waitThread.Start();
 
                     changeServerState(true);
@@ -52,6 +53,7 @@ namespace chatServer
                 }
             }
             clientSocketArray.Clear();
+            waitThread.Join();
 
             changeServerState(false);
         }
@@ -85,6 +87,7 @@ namespace chatServer
                     Thread chatThread = new Thread(new ThreadStart(clientHandler.Process));
                     chatThread.Start();
                     clientSocketArray.Add(socketClient);
+                    chatMessageTextBox.AppendText(socketClient.ToString() + "\r\n");
                 }
                 catch
                 {
@@ -159,6 +162,7 @@ namespace chatServer
                     {
                         form1.clientSocketArray.Remove(socketClient);
                     }
+                    break;
                 }
             }
         }

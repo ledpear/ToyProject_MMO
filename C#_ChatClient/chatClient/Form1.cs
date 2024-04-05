@@ -63,6 +63,7 @@ namespace chatClient
         {
             try
             {
+                string dataToSend = message + "\r\n";
                 byte[] sendData = Encoding.Default.GetBytes(message);
                 networkStream.Write(sendData, 0, sendData.Length);
             }

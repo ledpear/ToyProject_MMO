@@ -8,10 +8,10 @@
 
 class IocpSocketHandler
 {
-	//í´ë˜ìŠ¤ ëª…ì„¸
-	//Iocp í†µì‹ ì„ í•˜ê¸° ìœ„í•œ ê°€ì¥ í•˜ë‹¨ì˜ ê°ì²´
-	//Iocp ì†Œì¼“ ê·¸ ìì²´
-	//IocpCommunicationManagerë¥¼ í†µí•´ì„œ ì‚¬ìš©
+	//Å¬·¡½º ¸í¼¼
+	//Iocp Åë½ÅÀ» ÇÏ±â À§ÇÑ °¡Àå ÇÏ´ÜÀÇ °´Ã¼
+	//Iocp ¼ÒÄÏ ±× ÀÚÃ¼
+	//IocpCommunicationManager¸¦ ÅëÇØ¼­ »ç¿ë
 
 	friend class IocpCommunicationManager;
 
@@ -23,11 +23,11 @@ public:
 	inline const UINT32			getIndex()			const { return _index; }
 
 private:
-	inline void					connectComplete()	{ _isSocketConnected = true; }
-	inline SOCKET&				getSocket()			{ return _iocpSocket; }
-	inline OverlappedIOBuffer&	getAcceptBuffer()	{ return _overlappedAcceptBuffer; }
-	inline OverlappedIOBuffer&	getSendBuffer()		{ return _overlappedSendBuffer; }
-	inline OverlappedIOBuffer&	getReceiveBuffer()	{ return _overlappedReceiveBuffer; }
+	inline void					connectComplete() { _isSocketConnected = true; }
+	inline SOCKET& getSocket() { return _iocpSocket; }
+	inline OverlappedIOBuffer& getAcceptBuffer() { return _overlappedAcceptBuffer; }
+	inline OverlappedIOBuffer& getSendBuffer() { return _overlappedSendBuffer; }
+	inline OverlappedIOBuffer& getReceiveBuffer() { return _overlappedReceiveBuffer; }
 
 	DWORD initialize(const UINT32 index = 0);
 	DWORD acceptAsync(SOCKET listenSocket);
@@ -60,12 +60,12 @@ private:
 
 class IocpCommunicationManager
 {
-	//í´ë˜ìŠ¤ ëª…ì„¸
-	// Iocp í†µì‹ ì„ ë„ì™€ì£¼ëŠ” ë§¤ë‹ˆì €
-	// ì—¬ëŸ¬ê°œì˜ ì†Œì¼“ì„ ìƒì„±í•˜ê³  ê´€ë¦¬í•œë‹¤.
-	// -> ì†Œì¼“ì„ ìƒì„±í•˜ëŠ”ê±´ ì™¸ë¶€ì—ì„œ í•˜ê³  ì—¬ê¸°ì„  ì»¨íŠ¸ë¡¤ë§Œí•œë‹¤
-	// í†µì‹  ê²°ê³¼ì— ë”°ë¼ ì½œë°± í•¨ìˆ˜ê°€ ì‹¤í–‰ëœë‹¤.
-	// ë ˆê±°ì‹œ ì†Œì¼“ í•¨ìˆ˜ëŠ” ì—¬ê¸°ì„œ ì‚¬ìš©í•˜ì§€ ì•ŠëŠ”ë‹¤. IocpSocketHandlerì—ì„œë§Œ ë‹¤ë£¬ë‹¤.
+	//Å¬·¡½º ¸í¼¼
+	// Iocp Åë½ÅÀ» µµ¿ÍÁÖ´Â ¸Å´ÏÀú
+	// ¿©·¯°³ÀÇ ¼ÒÄÏÀ» »ı¼ºÇÏ°í °ü¸®ÇÑ´Ù.
+	// -> ¼ÒÄÏÀ» »ı¼ºÇÏ´Â°Ç ¿ÜºÎ¿¡¼­ ÇÏ°í ¿©±â¼± ÄÁÆ®·Ñ¸¸ÇÑ´Ù
+	// Åë½Å °á°ú¿¡ µû¶ó Äİ¹é ÇÔ¼ö°¡ ½ÇÇàµÈ´Ù.
+	// ·¹°Å½Ã ¼ÒÄÏ ÇÔ¼ö´Â ¿©±â¼­ »ç¿ëÇÏÁö ¾Ê´Â´Ù. IocpSocketHandler¿¡¼­¸¸ ´Ù·é´Ù.
 
 public:
 	template<typename classType, typename funcType>

@@ -39,14 +39,14 @@ private:
 
 private:
 	std::vector<std::thread>						_workThreads;
-	//ì±„íŒ…ì„ ë³´ë‚¼ ë•Œ ë°˜ë³µí•´ì„œ ìˆœíšŒí•´ì•¼í•˜ê¸° ë•Œë¬¸ì— vectorë¡œ ê²°ì •
+	//Ã¤ÆÃÀ» º¸³¾ ¶§ ¹İº¹ÇØ¼­ ¼øÈ¸ÇØ¾ßÇÏ±â ¶§¹®¿¡ vector·Î °áÁ¤
 	std::vector<std::unique_ptr<IocpSocketHandler>>	_iocpSocketHandlers;
 	std::unique_ptr<IocpCommunicationManager>		_iocpCommunicationManager;
 	std::unique_ptr<IocpSocketHandler>				_listenSocketHandler;
 	std::mutex										_iocpSocketHandlersLock;
 	WSADATA							_wsaData;
-	UINT32							_maxIOThreadCount	= 0;
-	UINT32							_maxClientCount		= 0;
-	bool							_wsaStartupResult	= false;
-	bool							_isWorkThreadRun	= false;
+	UINT32							_maxIOThreadCount = 0;
+	UINT32							_maxClientCount = 0;
+	bool							_wsaStartupResult = false;
+	bool							_isWorkThreadRun = false;
 };

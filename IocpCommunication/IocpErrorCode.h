@@ -2,26 +2,26 @@
 enum class IocpErrorCode
 {
 	//Code													//Cause
-	NOT_IOCP_ERROR = 0,										//ì—ëŸ¬ê°€ ë°œìƒí•˜ì§€ ì•ŠìŒ
+	NOT_IOCP_ERROR = 0,										//¿¡·¯°¡ ¹ß»ýÇÏÁö ¾ÊÀ½
 
-	IOCP_NO_TASK = 100,										//IOCP Queueì— ëŒ€ê¸°ì¤‘ì¸ ìž‘ì—…ì´ ì—†ë‹¤.
-	IOCP_DISCONNECT_REQUEST,								//ì—°ê²° ì¢…ë£Œ ìš”ì²­
+	IOCP_NO_TASK = 100,										//IOCP Queue¿¡ ´ë±âÁßÀÎ ÀÛ¾÷ÀÌ ¾ø´Ù.
+	IOCP_DISCONNECT_REQUEST,								//¿¬°á Á¾·á ¿äÃ»
 
-	IOCP_ERROR_FAIL_COMMUNICATION = 1000,					//í†µì‹  ì‹¤íŒ¨
-	IOCP_ERROR_FAIL_CREATE_IOCP,							//IOCP ìƒì„± ì‹¤íŒ¨
-	IOCP_ERROR_FAIL_INITIALIZE_SOCKET,						//ì†Œì¼“ ì´ˆê¸°í™” ì‹¤íŒ¨
-	IOCP_ERROR_FAIL_CREATE_SOCKET,							//ì†Œì¼“ ìƒì„± ì‹¤íŒ¨
-	IOCP_ERROR_FAIL_BIND_SOCKET,							//ì†Œì¼“ BIND ì‹¤íŒ¨
-	IOCP_ERROR_FAIL_LISTEN_SOCKET,							//ì†Œì¼“ LISTEN ì‹¤íŒ¨
-	IOCP_ERROR_FAIL_CONNECT_SOCKET,							//ì†Œì¼“ Connect ì‹¤íŒ¨
-	IOCP_ERROR_FAIL_CONNECT_SOCKET_TO_IOCP,					//ì†Œì¼“ì„ IOCPì— ì—°ê²° ì‹¤íŒ¨
-	IOCP_ERROR_FAIL_ASYNC_RECEIVE,							//ë¹„ë™ê¸° Receive ì‹¤íŒ¨
-	IOCP_ERROR_FAIL_ASYNC_CONNECT_SOCKET,					//ë¹„ë™ê¸° Connect ì‹¤íŒ¨
-	IOCP_ERROR_FAIL_ASYNC_ACCEPT,							//ë¹„ë™ê¸° Accept ì‹¤íŒ¨
-	IOCP_ERROR_FAIL_ASYNC_SEND,								//ë¹„ë™ê¸° Send ì‹¤íŒ¨
+	IOCP_ERROR_FAIL_COMMUNICATION = 1000,					//Åë½Å ½ÇÆÐ
+	IOCP_ERROR_FAIL_CREATE_IOCP,							//IOCP »ý¼º ½ÇÆÐ
+	IOCP_ERROR_FAIL_INITIALIZE_SOCKET,						//¼ÒÄÏ ÃÊ±âÈ­ ½ÇÆÐ
+	IOCP_ERROR_FAIL_CREATE_SOCKET,							//¼ÒÄÏ »ý¼º ½ÇÆÐ
+	IOCP_ERROR_FAIL_BIND_SOCKET,							//¼ÒÄÏ BIND ½ÇÆÐ
+	IOCP_ERROR_FAIL_LISTEN_SOCKET,							//¼ÒÄÏ LISTEN ½ÇÆÐ
+	IOCP_ERROR_FAIL_CONNECT_SOCKET,							//¼ÒÄÏ Connect ½ÇÆÐ
+	IOCP_ERROR_FAIL_CONNECT_SOCKET_TO_IOCP,					//¼ÒÄÏÀ» IOCP¿¡ ¿¬°á ½ÇÆÐ
+	IOCP_ERROR_FAIL_ASYNC_RECEIVE,							//ºñµ¿±â Receive ½ÇÆÐ
+	IOCP_ERROR_FAIL_ASYNC_CONNECT_SOCKET,					//ºñµ¿±â Connect ½ÇÆÐ
+	IOCP_ERROR_FAIL_ASYNC_ACCEPT,							//ºñµ¿±â Accept ½ÇÆÐ
+	IOCP_ERROR_FAIL_ASYNC_SEND,								//ºñµ¿±â Send ½ÇÆÐ
 
-	IOCP_ERROR_INVALID_TASK,								//IOCP íì—ì„œ ë¹„ì •ìƒì ì¸ ìž‘ì—…ì´ ë°œìƒ
+	IOCP_ERROR_INVALID_TASK,								//IOCP Å¥¿¡¼­ ºñÁ¤»óÀûÀÎ ÀÛ¾÷ÀÌ ¹ß»ý
 
-	IOCP_ERROR_NOT_CREATE_IOCP,								//IOCPë¥¼ ìƒì„±í•˜ì§€ ì•Šê³  ì†Œì¼“ê´€ë ¨ í•¨ìˆ˜ë¥¼ í˜¸ì¶œ
-	IOCP_ERROR_SOCKET_NOT_CONNECT_IOCP,						//IOCPì™€ ì—°ê²°í•˜ì§€ ì•Šê³  ë¹„ë™ê¸° í•¨ìˆ˜ë¥¼ í˜¸ì¶œ
+	IOCP_ERROR_NOT_CREATE_IOCP,								//IOCP¸¦ »ý¼ºÇÏÁö ¾Ê°í ¼ÒÄÏ°ü·Ã ÇÔ¼ö¸¦ È£Ãâ
+	IOCP_ERROR_SOCKET_NOT_CONNECT_IOCP,						//IOCP¿Í ¿¬°áÇÏÁö ¾Ê°í ºñµ¿±â ÇÔ¼ö¸¦ È£Ãâ
 };

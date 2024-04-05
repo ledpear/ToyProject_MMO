@@ -10,7 +10,7 @@
 
 IOCPChatServer::IOCPChatServer()
 	: _iocpCommunicationManager(std::make_unique<IocpCommunicationManager>
-		(this, &IOCPChatServer::closeSocketComplete, &IOCPChatServer::acceptComplete, &IOCPChatServer::connectComplete, &IOCPChatServer::sendComplete, &IOCPChatServer::receiveComplete) )
+		(this, &IOCPChatServer::closeSocketComplete, &IOCPChatServer::acceptComplete, &IOCPChatServer::connectComplete, &IOCPChatServer::sendComplete, &IOCPChatServer::receiveComplete))
 	, _listenSocketHandler(std::make_unique<IocpSocketHandler>())
 {
 	_wsaStartupResult = (WSAStartup(MAKEWORD(2, 2), &_wsaData) == 0);
@@ -19,21 +19,21 @@ IOCPChatServer::IOCPChatServer()
 IOCPChatServer::~IOCPChatServer()
 {
 	shutdown();
-	if(_wsaStartupResult)
+	if (_wsaStartupResult)
 		WSACleanup();
 }
 
 bool IOCPChatServer::initialize(const UINT32 maxIOThreadCount)
 {
-	//ìƒì„±ìì—ì„œ WSAStartupê°€ ì‹¤íŒ¨í–ˆìœ¼ë©´ ë¦¬í„´
+	//»ı¼ºÀÚ¿¡¼­ WSAStartup°¡ ½ÇÆĞÇßÀ¸¸é ¸®ÅÏ
 	if (_wsaStartupResult == false)
 		return false;
 
-	// IO Completion Port ìƒì„±
+	// IO Completion Port »ı¼º
 	if (_iocpCommunicationManager->createIocp(maxIOThreadCount) != IocpErrorCode::NOT_IOCP_ERROR)
 		return false;
 
-	//listen ì†Œì¼“ ì´ˆê¸°í™”
+	//listen ¼ÒÄÏ ÃÊ±âÈ­
 	if (_iocpCommunicationManager->initializeAndConnectIocpSocketHandler(*_listenSocketHandler.get()) != IocpErrorCode::NOT_IOCP_ERROR)
 		return false;
 
@@ -56,7 +56,7 @@ bool IOCPChatServer::run(const UINT32 maxClientCount)
 
 	_maxClientCount = maxClientCount;
 
-	//í´ë¼ì´ì–¸íŠ¸ IO controller ìƒì„±
+	//Å¬¶óÀÌ¾ğÆ® IO controller »ı¼º
 	_iocpSocketHandlers.reserve(maxClientCount);
 	for (UINT32 index = 0; index < maxClientCount; ++index)
 	{
@@ -64,7 +64,7 @@ bool IOCPChatServer::run(const UINT32 maxClientCount)
 		_iocpCommunicationManager->initializeAndConnectIocpSocketHandler(*_iocpSocketHandlers.back().get(), index);
 	}
 
-	// ê° í´ë¼ì´ì–¸íŠ¸ accept
+	// °¢ Å¬¶óÀÌ¾ğÆ® accept
 	bool isAcceptResult = true;
 	for (std::unique_ptr<IocpSocketHandler>& iocpSocketHandler : _iocpSocketHandlers)
 	{
@@ -76,14 +76,14 @@ bool IOCPChatServer::run(const UINT32 maxClientCount)
 		}
 	}
 
-	// work ì“°ë ˆë“œ ìƒì„±
-	createWorkThread();	
+	// work ¾²·¹µå »ı¼º
+	createWorkThread();
 	return true;
 }
 
 void IOCPChatServer::shutdown()
 {
-	//ì—°ê²°ëœ ì†Œì¼“ ì¢…ë£Œ
+	//¿¬°áµÈ ¼ÒÄÏ Á¾·á
 	for (std::unique_ptr<IocpSocketHandler>& iocpSocketHandler : _iocpSocketHandlers)
 	{
 		if (iocpSocketHandler->isSocketConnected() == false)
@@ -92,12 +92,12 @@ void IOCPChatServer::shutdown()
 		_iocpCommunicationManager->closeSocket(*iocpSocketHandler.get());
 	}
 
-	//ìŠ¤ë ˆë“œ ì¢…ë£Œ
+	//½º·¹µå Á¾·á
 	_isWorkThreadRun = false;
 	for (std::thread& workThread : _workThreads)
 		workThread.join();
 
-	//ë¦¬ìŠ¨ ì†Œì¼“ ì¢…ë£Œ
+	//¸®½¼ ¼ÒÄÏ Á¾·á
 	_iocpCommunicationManager->closeSocket(*_listenSocketHandler.get());
 }
 
@@ -146,12 +146,12 @@ void IOCPChatServer::closeSocketIocpControllerAndStartAccept(IocpSocketHandler& 
 	const UINT32 clientIndex = iocpSocketHandler.getIndex();
 	_iocpCommunicationManager->closeSocket(iocpSocketHandler, isForce);
 
-	//ì ‘ì†í•´ ìˆëŠ” í´ë¼ì´ì–¸íŠ¸ì—ê²Œ ì¢…ë£Œ ì•Œë¦¼ ë³´ë‚´ê¸°
+	//Á¢¼ÓÇØ ÀÖ´Â Å¬¶óÀÌ¾ğÆ®¿¡°Ô Á¾·á ¾Ë¸² º¸³»±â
 	const std::string message(std::to_string(clientIndex) + " Index Client Exit");
 	printf_s("[Index:%d] Client Exit.\n", clientIndex);
 	sendMsgAllClients(message.c_str());
 
-	//ì¢…ë£Œí•œ ì†Œì¼“ ë‹¤ì‹œ ë¹„ë™ê¸° Accept
+	//Á¾·áÇÑ ¼ÒÄÏ ´Ù½Ã ºñµ¿±â Accept
 	if (_iocpCommunicationManager->initializeAndConnectIocpSocketHandler(iocpSocketHandler, clientIndex) != IocpErrorCode::NOT_IOCP_ERROR)
 	{
 		printf_s("[Index:%d] initializeAndConnectIocpSocketHandler Fail.\n", clientIndex);
@@ -189,7 +189,7 @@ void IOCPChatServer::acceptComplete(IocpSocketHandler& iocpSocketHandler, Overla
 	const int clientIndex = overlappedIOInfo._index;
 	std::string clientIP;
 	int port = 0;
-	
+
 	std::unique_ptr<IocpSocketHandler>& acceptIocpSocketHandler = _iocpSocketHandlers[clientIndex];
 	_iocpCommunicationManager->acceptComplete(*acceptIocpSocketHandler.get(), &clientIP, &port);
 	printf("Accept Completion Client : IP(%s) SOCKET(%d)\n", clientIP.c_str(), port);
@@ -201,7 +201,7 @@ void IOCPChatServer::acceptComplete(IocpSocketHandler& iocpSocketHandler, Overla
 		return;
 	}
 
-	//ì ‘ì†í•´ ìˆëŠ” í´ë¼ì´ì–¸íŠ¸ì—ê²Œ ì ‘ì† ì•Œë¦¼ ë³´ë‚´ê¸°
+	//Á¢¼ÓÇØ ÀÖ´Â Å¬¶óÀÌ¾ğÆ®¿¡°Ô Á¢¼Ó ¾Ë¸² º¸³»±â
 	const std::string message(std::to_string(clientIndex) + " Index Client Access");
 	sendMsgAllClients(message.c_str());
 }
@@ -223,9 +223,9 @@ void IOCPChatServer::receiveComplete(IocpSocketHandler& iocpSocketHandler, Overl
 
 	printf_s("%s\n", msgString.c_str());
 	sendMsgAllClients(msgString);
-	if(_iocpCommunicationManager->receiveSocket(iocpSocketHandler) != IocpErrorCode::NOT_IOCP_ERROR)
+	if (_iocpCommunicationManager->receiveSocket(iocpSocketHandler) != IocpErrorCode::NOT_IOCP_ERROR)
 	{
-		//í´ë¼ì´ì–¸íŠ¸ ì—°ê²° í•´ì œ ìš”ì²­
+		//Å¬¶óÀÌ¾ğÆ® ¿¬°á ÇØÁ¦ ¿äÃ»
 		printf_s("[Index:%d] bindReceive Fail.\n", clientIndex);
 		closeSocketIocpControllerAndStartAccept(iocpSocketHandler);
 		return;
