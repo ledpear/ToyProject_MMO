@@ -31,7 +31,7 @@ namespace ChatClient.NET6._0
                     Thread chatThread = new Thread(new ThreadStart(chatHandler.ChatProcess));
                     chatThread.Start();
 
-                    Message_Snd("<" + txtName.Text + "> 님께서 접속 하셨습니다.", true);
+                    Message_Snd("<(" + ntwStream.Socket.LocalEndPoint.ToString() + ")" + txtName.Text + "> 님께서 접속 하셨습니다.", true);
                     btnConnect.Text = "나가기";
                 }
                 catch (System.Exception Ex)

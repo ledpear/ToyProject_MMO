@@ -98,14 +98,13 @@ namespace chatServer
 
         public void SetText(string text)
         {
-            text += "\r\n";
             if (this.chatMessageTextBox.InvokeRequired)
             {
                 this.Invoke(new SetTextDelegate(SetText), new object[] { text });
             }
             else
             {
-                this.chatMessageTextBox.AppendText(text);
+                this.chatMessageTextBox.AppendText(text + "\r\n");
             }
         }
 
@@ -140,10 +139,15 @@ namespace chatServer
                 try
                 {
                     string message = streamReader.ReadLine();
+                    if(message == null && socketClient.Connected == false)
+                    {
+                        break;
+                    }
+
                     if(message != null && message != "")
                     {
                         form1.SetText(message);
-                        byte[] sendData = Encoding.Default.GetBytes(message);
+                        byte[] sendData = Encoding.Default.GetBytes(message + "\r\n");
                         NetworkStream networkStream = null;
                         lock (form1.clientSocketArray)
                         {

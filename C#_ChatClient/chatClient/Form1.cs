@@ -32,6 +32,7 @@ namespace chatClient
                     chatHandler.Setup(this, networkStream, this.chatTextBox);
                     Thread chatThread = new Thread(new ThreadStart(chatHandler.ChatProcess));
                     chatThread.Start();
+
                     startChat();
                 }
                 catch (System.Exception Err)
@@ -48,7 +49,7 @@ namespace chatClient
         public void SetText(string text)
         {
             //크로스 스레드 문제 해결
-            if (this.sendTextBox.InvokeRequired)
+            if (this.chatTextBox.InvokeRequired)
             {
                 SetTextDelegate setTextDelegate = new SetTextDelegate(SetText);
                 this.Invoke(setTextDelegate, new object[] { text });
@@ -64,7 +65,7 @@ namespace chatClient
             try
             {
                 string dataToSend = message + "\r\n";
-                byte[] sendData = Encoding.Default.GetBytes(message);
+                byte[] sendData = Encoding.Default.GetBytes(dataToSend);
                 networkStream.Write(sendData, 0, sendData.Length);
             }
             catch (Exception Ex)
@@ -154,7 +155,9 @@ namespace chatClient
                 {
                     string message = streamReader.ReadLine();
                     if(message != null && message != "")
+                    {
                         form1.SetText(message + "\r\n");
+                    }
                 }
                 catch(System.Exception)
                 {

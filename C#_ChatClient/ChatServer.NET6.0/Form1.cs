@@ -16,6 +16,7 @@ namespace ChatServer.NET6._0
 
         TcpListener chatServer = new TcpListener(IPAddress.Parse("127.0.0.1"), 12000);
         public static ArrayList clientSocketArray = new ArrayList();
+        private Thread waitThread = null;
 
         private void btnStart_Click(object sender, EventArgs e)
         {
@@ -23,32 +24,42 @@ namespace ChatServer.NET6._0
             {
                 if (lblMsg.Tag.ToString() == "Stop")
                 {
-                    chatServer.Start();
-                    Thread waitThread = new Thread(new ThreadStart(AcceptClient));
-                    waitThread.Start();
-
-                    lblMsg.Text = "Server 시작 됨";
-                    lblMsg.Tag = "Start";
-                    btnStart.Text = "서버 종료";
+                    serverStart();
                 }
                 else
                 {
-                    chatServer.Stop();
-                    foreach (Socket soket in Form1.clientSocketArray)
-                    {
-                        soket.Close();
-                    }
-                    clientSocketArray.Clear();
-
-                    lblMsg.Text = "Server 중지 됨";
-                    lblMsg.Tag = "Stop";
-                    btnStart.Text = "서버 시작";
+                    serverStop();
                 }
             }
             catch (Exception ex)
             {
                 MessageBox.Show("서버 시작 오류 :" + ex.Message);
             }
+        }
+
+        private void serverStart()
+        {
+            chatServer.Start();
+            waitThread = new Thread(new ThreadStart(AcceptClient));
+            waitThread.Start();
+
+            lblMsg.Text = "Server 시작 됨";
+            lblMsg.Tag = "Start";
+            btnStart.Text = "서버 종료";
+        }
+
+        private void serverStop()
+        {
+            chatServer.Stop();
+            foreach (Socket soket in Form1.clientSocketArray)
+            {
+                soket.Close();
+            }
+            clientSocketArray.Clear();
+
+            lblMsg.Text = "Server 중지 됨";
+            lblMsg.Tag = "Stop";
+            btnStart.Text = "서버 시작";
         }
 
         private void AcceptClient()
@@ -64,10 +75,13 @@ namespace ChatServer.NET6._0
                     clientHandler.ClientHandler_Setup(this, socketClient, this.txtChatMsg);
                     Thread thd_ChatProcess = new Thread(new ThreadStart(clientHandler.Chat_Process));
                     thd_ChatProcess.Start();
+
+                    SetText("Connect Socket : " + socketClient.RemoteEndPoint.ToString() + "\r\n");
                 }
                 catch (Exception ex)
                 {
-
+                    Form1.clientSocketArray.Remove(socketClient);
+                    break;
                 }
             }
         }
@@ -88,7 +102,7 @@ namespace ChatServer.NET6._0
         private void Form1_FormClosed(object sender, FormClosedEventArgs e)
         {
             Application.Exit();
-            chatServer.Stop();
+            serverStop();
         }
     }
 
