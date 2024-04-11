@@ -153,8 +153,10 @@ namespace chatClient
             {
                 try
                 {
-                    string message = streamReader.ReadLine();
-                    if(message != null && message != "")
+                    byte[] receiveData = new byte[255];
+                    networkStream.Socket.Receive(receiveData);
+                    string message = Encoding.Default.GetString(receiveData);
+                    if (message != null && message != "")
                     {
                         form1.SetText(message + "\r\n");
                     }
